@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Catch Logger</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Catch Logger">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#0a6a85">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}body{margin:0;font:14px system-ui,-apple-system,sans-serif}[hidden]{display:none!important}</style>
+<style>
+/* Layout: one-screen deck console. Status bar on top; working area of three columns
+   (species | unit + length pad | attributes + Enter) with the running list underneath. */
+:root{
+  --bg:#e8edf0; --surface:#f8fafb; --raised:#ffffff; --ink:#0f1f29; --muted:#566771; --line:#c9d4da;
+  --accent:#0a6a85; --on-accent:#ffffff; --accent-soft:#d5e8ee;
+  --go:#1c7c45; --on-go:#ffffff; --warn:#9c5300; --warn-soft:#fbe9d1; --danger:#b3261e; --danger-soft:#f8dedb;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0b1216; --surface:#121e26; --raised:#17272f; --ink:#e2ebef; --muted:#8fa1ab; --line:#27404b;
+  --accent:#4cb2d0; --on-accent:#05202a; --accent-soft:#15384a;
+  --go:#3ab36a; --on-go:#04200e; --warn:#f0a446; --warn-soft:#3a2810; --danger:#f0776d; --danger-soft:#3b1a17;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b1216; --surface:#121e26; --raised:#17272f; --ink:#e2ebef; --muted:#8fa1ab; --line:#27404b;
+  --accent:#4cb2d0; --on-accent:#05202a; --accent-soft:#15384a;
+  --go:#3ab36a; --on-go:#04200e; --warn:#f0a446; --warn-soft:#3a2810; --danger:#f0776d; --danger-soft:#3b1a17;
+  color-scheme:dark}
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.35;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{height:100%;display:grid;grid-template-rows:auto 1fr;min-height:0}
+main{overflow:auto;padding-inline:16px;padding-block:0 16px;min-height:0}
+
+/* status bar */
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:.02em;text-transform:uppercase;color:var(--accent)}
+.stn{display:flex;flex-direction:column;min-width:0}
+.stn b{font-family:var(--f-display);font-size:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stn span{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:4px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.pill.ok{border-color:var(--go);color:var(--go)}
+.pill.bad{border-color:var(--warn);color:var(--warn)}
+.nav{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.nav button{min-height:42px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:var(--raised);font-weight:600;cursor:pointer}
+.nav button[aria-current="page"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+
+/* generic */
+.lbl{font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)} .small{font-size:12.5px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.btn{min-height:52px;border:1px solid var(--line);background:var(--raised);border-radius:var(--r);font-weight:600;font-size:16px;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;padding:4px 8px}
+.btn:active{transform:translateY(1px)}
+.btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn:focus-visible,.nav button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn.danger{border-color:var(--danger);color:var(--danger)}
+.btn.danger.armed{background:var(--danger);color:var(--raised)}
+
+/* entry layout */
+.entry{display:grid;grid-template-columns:1.2fr 1fr 1.1fr;gap:12px;padding-block:12px}
+.recent{grid-column:1/-1}
+@media (max-width:1050px){.entry{grid-template-columns:1fr 1fr}.col-species{grid-column:1/-1}}
+@media (max-width:660px){.entry{grid-template-columns:1fr}}
+
+.phead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.spgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+@media (max-width:1050px){.spgrid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media (max-width:660px){.spgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.sp{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;text-align:left;padding:6px 10px;min-height:58px;line-height:1.15}
+.sp .n{font-size:15px}
+.sp .s{font-size:11.5px;font-style:italic;font-weight:400;opacity:.75}
+.otherbox{display:flex;flex-direction:column;gap:6px}
+.otherbox input{min-height:46px;border:1px solid var(--line);border-radius:8px;background:var(--raised);padding:0 12px}
+.otherlist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-height:260px;overflow:auto}
+
+.unitrow{display:grid;grid-template-columns:auto 64px 1fr 64px;gap:8px;align-items:center}
+.unitval{font-family:var(--f-mono);font-weight:700;font-size:34px;text-align:center;font-variant-numeric:tabular-nums}
+.step{font-size:22px;min-height:56px}
+.hooks{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px}
+.hooks .btn{min-height:44px;padding:0;font-family:var(--f-mono);font-size:15px}
+.lendisp{border:1px solid var(--line);background:var(--raised);border-radius:var(--r);padding:8px 12px}
+.cursp{font-family:var(--f-display);font-weight:600;font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cursp i{font-family:var(--f-body);font-weight:400;font-size:13px;color:var(--muted)}
+.len{display:flex;align-items:baseline;justify-content:flex-end;gap:8px}
+.len span{font-family:var(--f-mono);font-weight:700;font-size:58px;line-height:1.05;font-variant-numeric:tabular-nums}
+.len small{color:var(--muted);font-weight:600}
+.keypad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.keypad .btn{min-height:64px;font-family:var(--f-mono);font-size:26px}
+.keypad .fn{font-family:var(--f-body);font-size:16px}
+
+.group{display:flex;flex-direction:column;gap:5px}
+.seg{display:grid;gap:6px}
+.seg.c4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.seg.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.seg.c2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.seg .btn{min-height:50px}
+.seg.c4 .btn{font-size:14px;padding:4px 2px}
+.samp{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
+.samp small{font-family:var(--f-mono);font-size:11.5px;font-weight:500;opacity:.8}
+.code{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;font-family:var(--f-mono)}
+.code small{font-family:var(--f-body);font-size:11px;font-weight:500;opacity:.8}
+.seg .btn:disabled{opacity:.3}
+.seg[data-f="fate"] .btn{font-size:15px;line-height:1.1}
+.tepsrow{display:grid;grid-template-columns:auto 1fr;gap:6px}
+.tepsrow .btn{min-height:44px;padding:0 12px;font-size:14px}
+#tepsBtn[aria-pressed="true"]{background:var(--danger);border-color:var(--danger);color:var(--raised)}
+.tag.teps{border-color:var(--danger);color:var(--danger)}
+.tag.dis{border-color:var(--muted);color:var(--muted)}
+.col-attr .seg .btn{min-height:46px}
+.cmt{min-height:44px;border:1px solid var(--line);border-radius:8px;background:var(--raised);padding:0 12px;width:100%}
+.warn{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);border-radius:8px;padding:8px 10px;font-weight:600;font-size:14px}
+.enter{min-height:76px;font-size:24px;font-family:var(--f-display);letter-spacing:.06em;text-transform:uppercase;background:var(--go);border-color:var(--go);color:var(--on-go)}
+.enter.confirm{background:var(--warn);border-color:var(--warn)}
+.enter.edit{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+
+/* tables */
+.tblwrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:14px}
+th{font-family:var(--f-display);font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:12.5px;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--accent-soft)}
+tr.sel td{background:var(--accent-soft)}
+td.mono{font-family:var(--f-mono);font-size:13px}
+.tag{font-size:11.5px;font-weight:700;padding:2px 6px;border-radius:5px;border:1px solid var(--line)}
+.tag.ret{border-color:var(--accent);color:var(--accent)}
+.tag.dep{border-color:var(--danger);color:var(--danger)}
+.empty td{color:var(--muted);font-style:italic}
+.stat{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.stat.prog{border-color:var(--warn);color:var(--warn)}
+.stat.ok{border-color:var(--go);color:var(--go)}
+.btn.go{min-height:42px;padding:0 14px;background:var(--go);border-color:var(--go);color:var(--on-go);font-size:15px}
+.btn:disabled{opacity:.45;cursor:default}
+
+/* other views */
+.page{padding-block:16px;display:flex;flex-direction:column;gap:14px;max-width:1100px}
+.page h2{font-family:var(--f-display);font-weight:700;font-size:26px;margin:0;text-wrap:balance}
+.form{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 14px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:13px;font-weight:600;color:var(--muted)}
+.field input,.field select,.field textarea{min-height:46px;border:1px solid var(--line);border-radius:8px;background:var(--raised);padding:6px 10px;width:100%}
+.field.wide{grid-column:1/-1}
+.sechead{padding-top:8px;border-top:1px solid var(--line)}
+.sechead:first-child{padding-top:0;border-top:0}
+.field textarea{min-height:70px}
+.stamp{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 14px;align-items:end}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.actions .btn{padding:0 18px}
+.btn.primary{background:var(--go);border-color:var(--go);color:var(--on-go)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs .btn{min-height:44px;padding:0 14px}
+textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-radius:8px;background:var(--raised);padding:10px;white-space:pre;overflow:auto}
+.tally{display:flex;flex-wrap:wrap;gap:6px}
+.tally span{border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:var(--raised);font-size:13.5px;font-variant-numeric:tabular-nums}
+.tally b{font-family:var(--f-mono)}
+.note{font-size:13.5px;color:var(--muted);max-width:70ch}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;opacity:0;transition:opacity .15s;pointer-events:none;z-index:10;max-width:calc(100% - 32px)}
+.toast.on{opacity:1}
+.flash{animation:flash .35s ease-out}
+@keyframes flash{from{background:var(--go);color:var(--on-go)}to{}}
+@media (prefers-reduced-motion:reduce){.flash{animation:none}.toast{transition:none}}
+</style>
+
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">Catch Logger</div>
+    <div class="stn"><b id="stnTitle">—</b><span id="stnSub">—</span></div>
+    <div class="pills"><span class="pill" id="gpsPill">GPS …</span><span class="pill" id="savePill">Saved</span></div>
+    <nav class="nav" id="nav">
+      <button data-v="stations" aria-current="page">Stations</button>
+      <button data-v="entry">Data entry</button>
+      <button data-v="list">Full list</button>
+      <button data-v="header">Header</button>
+      <button data-v="export">Export</button>
+      <button data-v="setup">Setup</button>
+    </nav>
+  </header>
+  <main id="main">
+    <section class="entry" id="v-entry">
+      <div class="panel col-species">
+        <div class="phead"><span class="lbl">Species</span><span class="muted small" id="presetName"></span></div>
+        <div class="spgrid" id="spgrid"></div>
+        <button class="btn" id="otherBtn">Other species…</button>
+        <div class="otherbox" id="otherBox" hidden>
+          <input id="otherQ" placeholder="Search common or scientific name" autocomplete="off" aria-label="Search species">
+          <div class="otherlist" id="otherList"></div>
+        </div>
+      </div>
+
+      <div class="panel col-pad">
+        <div class="unitrow">
+          <span class="lbl" id="unitLbl">Trap</span>
+          <button class="btn step" id="unitDn" aria-label="Previous unit">▼</button>
+          <output class="unitval" id="unitVal">1</output>
+          <button class="btn step" id="unitUp" aria-label="Next unit">▲</button>
+        </div>
+        <div class="group" id="hookRow" hidden>
+          <span class="lbl">Hook position (1 = shallowest)</span>
+          <div class="hooks" id="hooks"></div>
+        </div>
+        <div class="lendisp">
+          <div class="cursp" id="curSp">Pick a species</div>
+          <div class="len"><span id="lenVal">—</span><small>mm FL</small></div>
+        </div>
+        <div class="keypad" id="keypad"></div>
+        <div class="group"><span class="lbl">Sex</span>
+          <div class="seg c4" data-f="sex">
+            <button class="btn" data-v="M">Male</button><button class="btn" data-v="F">Female</button>
+            <button class="btn" data-v="U">Unknown</button><button class="btn" data-v="I">Immature</button>
+          </div></div>
+      </div>
+
+      <div class="panel col-attr">
+        <div class="group"><span class="lbl">Fate</span>
+          <div class="seg c3" data-f="fate">
+            <button class="btn" data-v="RET">Retained</button><button class="btn" data-v="BT">Retained for bait (BT)</button><button class="btn" data-v="DIS">Discarded</button>
+          </div></div>
+        <div class="group"><span class="lbl">Discard reason</span>
+          <div class="seg c4" data-f="dr">
+            <button class="btn code" data-v="NS">NS<small>Not legal size</small></button>
+            <button class="btn code" data-v="NE">NE<small>Low value</small></button>
+            <button class="btn code" data-v="PQ">PQ<small>Poor quality</small></button>
+            <button class="btn code" data-v="DD">DD<small>Dead</small></button>
+          </div></div>
+        <div class="group"><span class="lbl">Release condition</span>
+          <div class="seg c4" data-f="rc">
+            <button class="btn code" data-v="AU">AU<small>Alive uninjured</small></button>
+            <button class="btn code" data-v="AI">AI<small>Alive injured</small></button>
+            <button class="btn code" data-v="DD">DD<small>Dead</small></button>
+            <button class="btn code" data-v="UN">UN<small>Unknown</small></button>
+          </div></div>
+        <div class="group"><span class="lbl">Depredation</span>
+          <div class="seg c3" data-f="dep">
+            <button class="btn" data-v="N">None</button><button class="btn" data-v="P">Partial</button><button class="btn" data-v="W">Whole</button>
+          </div></div>
+        <div class="group"><span class="lbl">Samples (auto serial)</span>
+          <div class="seg c4" id="sampSeg"></div></div>
+        <div class="tepsrow">
+          <button class="btn" id="tepsBtn" aria-pressed="false">TEPS interaction</button>
+          <input class="cmt" id="cmt" placeholder="Fish comment (optional)" aria-label="Fish comment">
+        </div>
+        <div class="warn" id="warnBox" hidden></div>
+        <button class="btn enter" id="enterBtn">Enter</button>
+        <div class="row2">
+          <button class="btn" id="emptyBtn">Empty trap</button>
+          <button class="btn" id="undoBtn">Undo last</button>
+        </div>
+      </div>
+
+      <div class="panel recent">
+        <div class="phead"><span class="lbl">Running list · tap a row to edit</span><span class="muted small" id="recentCount"></span></div>
+        <div class="tblwrap"><table><thead><tr><th>#</th><th id="recUnitTh">Unit</th><th>Species</th><th>FL mm</th><th>Sex</th><th>Fate</th><th>Depred.</th><th>Samples</th><th>Time</th></tr></thead><tbody id="recentBody"></tbody></table></div>
+      </div>
+    </section>
+    <section class="page" id="v-other" hidden></section>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+const LS_KEY='demersalCatchLogger.v2';
+const $=s=>document.querySelector(s);
+const esc=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const z=n=>String(n).padStart(2,'0');
+const localDT=d=>`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`;
+const hhmm=iso=>{const d=new Date(iso);return z(d.getHours())+':'+z(d.getMinutes())};
+
+/* Species presets. CAAB codes are left blank on purpose: fill them from the CAAB list before use.
+   max = sanity-check ceiling for fork length (mm); placeholder values, adjust per species. */
+const sp=(c,s,max,x)=>Object.assign({c,s,max,caab:''},x||{});
+const PRESETS={
+  west:{name:'West Coast',list:[
+    sp('Pink snapper','Chrysophrys auratus',1300),sp('WA dhufish','Glaucosoma hebraicum',1200),
+    sp('Baldchin groper','Choerodon rubescens',900),sp('Breaksea cod','Epinephelides armatus',600),
+    sp('Redthroat emperor','Lethrinus miniatus',700),sp('Western blue groper','Achoerodus gouldii',1700),
+    sp('Bight redfish','Centroberyx gerrardi',650),sp('Queen snapper','Nemadactylus valenciennesi',1000),
+    sp('Samsonfish','Seriola hippos',1700),sp('Western foxfish','Bodianus frenchii',500),
+    sp('Sergeant baker','Latropiscis purpurissatus',700),sp('Harlequin fish','Othos dentex',900),
+    sp('Swallowtail','Centroberyx lineatus',450),sp('Spangled emperor','Lethrinus nebulosus',900),
+    sp('Redlip morwong','Goniistius rubrolabiatus',500)]},
+  north:{name:'Kimberley trap (NDSF sheet)',list:[
+    sp('Goldband snapper','Pristipomoides multidens',1100),sp('Sharptooth jobfish','Pristipomoides typus',800),
+    sp('Red emperor','Lutjanus sebae',1100),sp('Saddletail snapper','Lutjanus malabaricus',1000),
+    sp('Crimson snapper','Lutjanus erythropterus',750),sp('Brownstripe snapper','Lutjanus vitta',450),
+    sp('Indonesian snapper','Lutjanus bitaeniatus',550),sp('Moses snapper','Lutjanus russellii',550),
+    sp('Darktail snapper','Lutjanus lemniscatus',700),sp('Spangled emperor','Lethrinus nebulosus',900),
+    sp('Redspot emperor','Lethrinus lentjan',550),sp('Yellowspotted rockcod','Epinephelus areolatus',500),
+    sp('Duskytail grouper','Epinephelus bleekeri',800),sp('Frostback rockcod','Epinephelus bilobatus',450),
+    sp('Rankin cod','Epinephelus multinotatus',1000,{note:'Sheet lists "Epinephelus rankini"'}),
+    sp('Starry triggerfish','Abalistes stellatus',650,{d:'DIS'})]}
+};
+const EXTRA=[sp('Yellowtail kingfish','Seriola lalandi',1900),sp('Silver trevally','Pseudocaranx sp.',900),
+  sp('Western king wrasse','Coris auricularis',450),sp('Leatherjacket','Monacanthidae',700),
+  sp('Wobbegong','Orectolobus sp.',2500),sp('Gummy shark','Mustelus antarcticus',1800),
+  sp('Dusky whaler','Carcharhinus obscurus',3500),sp('Sandbar shark','Carcharhinus plumbeus',2500),
+  sp('Bronze whaler','Carcharhinus brachyurus',3000),sp('Blue-lined emperor','Lethrinus laticaudis',700),
+  sp('Chinaman cod','Epinephelus rivulatus',450),sp('Coral trout','Plectropomus spp.',1000),
+  sp('Goldspotted rockcod','Epinephelus coioides',1500),sp('Painted sweetlips','Diagramma labiosum',1000),
+  sp('Ruby snapper','Etelis sp.',1200),sp('Stripey snapper','Lutjanus carponotatus',450),
+  sp('Unidentified fish','',4000),
+  sp('Sea snake (TEPS)','Hydrophiinae',2000,{teps:true}),sp('Marine turtle (TEPS)','Cheloniidae',1500,{teps:true}),
+  sp('Sawfish (TEPS)','Pristidae',7000,{teps:true}),sp('Dolphin (TEPS)','Delphinidae',4000,{teps:true}),
+  sp('Other TEPS','',9000,{teps:true})];
+const allSpecies=()=>{const m=new Map();[...PRESETS.west.list,...PRESETS.north.list,...EXTRA].forEach(s=>m.set(s.c,s));return [...m.values()]};
+
+const SAMPLES=[['oto','Otolith'],['gon','Gonad'],['fin','Fin clip'],['sto','Stomach']];
+const UNIT_LBL={'Trap':'Trap','Dropline':'Drop','Hook and line':'Angler'};
+
+const MOONS=['New','Waxing crescent','First quarter','Waxing gibbous','Full','Waning gibbous','Last quarter','Waning crescent'];
+const HF=[
+  {sec:'Operation'},
+  {k:'date',l:'Date',t:'date'},{k:'vessel',l:'Vessel'},
+  {k:'project',l:'Project code'},{k:'opnum',l:'OPNUM (YYMMDDNN, auto if blank)'},
+  {k:'method',l:'Method',t:'select',o:['Trap','Dropline','Hook and line']},
+  {k:'region',l:'Region',t:'select',o:['Kimberley','Pilbara','Gascoyne','West Coast','South Coast']},
+  {k:'location',l:'Location'},{k:'depth',l:'Depth (m)',t:'number'},
+  {k:'dayNo',l:'Day no',t:'number'},{k:'stationNo',l:'Set no',t:'number'},{k:'lineNo',l:'Line no',t:'number'},
+  {k:'units',l:'No. of traps / drops / anglers',t:'number'},{k:'firstUnit',l:'First trap / drop / angler no',t:'number'},
+  {sec:'Gear and bait'},
+  {k:'gear',l:'Trap type / hook type'},{k:'hooksPerLine',l:'Hooks per line',t:'number'},
+  {k:'bait',l:'Bait',t:'select',o:['Pilchard','Bonito','Blue mackerel','Bullet tuna','Mixed','Other']},
+  {sec:'Conditions'},
+  {k:'windSpd',l:'Wind speed (kn)',t:'number'},{k:'windDir',l:'Wind direction',t:'select',o:['','N','NE','E','SE','S','SW','W','NW']},
+  {k:'tempSurf',l:'Surface temp (°C)',t:'number'},{k:'tempBot',l:'Bottom temp (°C)',t:'number'},
+  {k:'barometer',l:'Barometer (hPa)',t:'number'},
+  {k:'tide',l:'Tide',t:'select',o:['','Flood','Ebb','High slack','Low slack']},
+  {k:'tidalRange',l:'Tidal range (m)',t:'number'},{k:'tidalHeight',l:'Tidal height (m)',t:'number'},
+  {k:'moon',l:'Moon phase (auto from date)',t:'select',o:['',...MOONS]},
+  {k:'swell',l:'Swell (m)',t:'number'},{k:'seas',l:'Seas (m)',t:'number'},
+  {sec:'Notes'},
+  {k:'recorder',l:'Recorder'},{k:'comment',l:'Station comment',t:'textarea',wide:true}
+].filter(Boolean);
+const HFK=HF.filter(f=>f.k);
+function moonPhase(dateStr){const d=new Date(dateStr+'T12:00:00');if(isNaN(d))return '';
+  const age=((d-Date.UTC(2000,0,6,18,14))/86400000%29.530588853+29.530588853)%29.530588853;return MOONS[Math.floor((age/29.530588853)*8+0.5)%8]}
+function makeOpnum(h){if(!h.date)return '';const [y,m,d]=h.date.split('-');return y.slice(2)+m+d+z(+h.stationNo||0)}
+const STAMPS=['set','haul'];
+
+/* ---------- state ---------- */
+let S=null, view='entry', fix=null, gpsState='waiting', otherOpen=false, editFrom=null;
+
+function defaultHeader(){
+  const d=new Date();
+  const date=`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
+  const h={date,vessel:'Example vessel',project:'NDSF FIS Age Structure',opnum:'',method:'Trap',region:'Kimberley',
+    location:'Example ground',depth:62,dayNo:1,stationNo:1,lineNo:1,units:25,firstUnit:1,gear:'Standard fish trap',
+    hooksPerLine:'',bait:'Pilchard',windSpd:12,windDir:'SE',tempSurf:'',tempBot:'',barometer:'',tide:'',tidalRange:'',tidalHeight:'',
+    moon:moonPhase(date),swell:1,seas:0.5,recorder:'',comment:'EXAMPLE DATA: clear it in Setup before a real survey',
+    set_time:'',set_lat:'',set_lon:'',haul_time:'',haul_lat:'',haul_lon:''};
+  h.opnum=makeOpnum(h);return h;
+}
+function fresh(){
+  const st={id:uid(),h:defaultHeader(),created:new Date().toISOString(),example:true,seq:0};
+  const s={device:'IPAD-'+Math.random().toString(36).slice(2,5).toUpperCase(),preset:'north',defFate:'RET',
+    stations:[st],records:[],active:st.id,
+    serials:{oto:{prefix:'OT',next:1},gon:{prefix:'GN',next:1},fin:{prefix:'FC',next:1},sto:{prefix:'ST',next:1}},
+    cur:{sp:null,len:'',sex:'U',fate:'RET',dr:'',rc:'',teps:false,dep:'N',samp:{},cmt:'',unit:1,hook:1,editId:null,ack:false,warn:''}};
+  const t0=Date.now()-9*60000;
+  // [trap, species, FL, sex, fate, discard reason, release cond, depredation, samples, teps, comment]
+  const ex=[[1,'Goldband snapper',512,'F','RET','','','N',['oto','gon','fin']],[1,'Goldband snapper',468,'M','RET','','','N',['oto','fin']],
+    [1,'Red emperor',604,'F','RET','','','N',['oto','gon','fin','sto']],[2,'Starry triggerfish',342,'U','DIS','NE','AU','N',[]],
+    [2,'Saddletail snapper',388,'U','BT','','','P',[]],[3,'EMPTY'],
+    [4,'Sea snake (TEPS)','','U','DIS','','AU','N',[],true,'Entangled in trap mesh, released alive'],
+    [4,'Crimson snapper',301,'I','DIS','NS','AI','N',[]]];
+  ex.forEach((e,i)=>{
+    const r={id:uid(),station:st.id,device:s.device,seq:++st.seq,ts:new Date(t0+i*70000).toISOString(),unit:e[0],hook:'',
+      empty:e[1]==='EMPTY',species:e[1]==='EMPTY'?'EMPTY':e[1],sci:'',caab:'',fl_mm:e[2]||'',sex:e[3]||'',fate:e[4]||'',
+      dr:e[5]||'',rc:e[6]||'',dep:e[7]||'',teps:!!e[9],oto:'',gon:'',fin:'',sto:'',lat:'',lon:'',comment:e[10]||'',edited:''};
+    const spx=allSpecies().find(x=>x.c===e[1]); if(spx) r.sci=spx.s;
+    (e[8]||[]).forEach(k=>{r[k]=serialStr(s,k,s.serials[k].next++)});
+    s.records.push(r);
+  });
+  s.cur.unit=4; s.cur.sp=PRESETS.north.list[0];
+  [2,3].forEach(n=>{const h=Object.assign(defaultHeader(),{stationNo:n,depth:n===2?58:71});h.opnum=makeOpnum(h);
+    s.stations.push({id:uid(),h,created:new Date().toISOString(),example:true,seq:0})});
+  return s;
+}
+function load(){try{const t=localStorage.getItem(LS_KEY);if(t)return JSON.parse(t)}catch(e){}return null}
+function save(){let ok=true;try{localStorage.setItem(LS_KEY,JSON.stringify(S))}catch(e){ok=false}
+  const p=$('#savePill');p.textContent=ok?'Saved on device':'Not saving';p.className='pill '+(ok?'ok':'bad')}
+function serialStr(s,k,n){return s.serials[k].prefix+String(n).padStart(5,'0')}
+const active=()=>S.stations.find(x=>x.id===S.active)||null;
+const stRecs=id=>S.records.filter(r=>r.station===id);
+const unitLabel=()=>UNIT_LBL[(active()||{h:{}}).h.method]||'Unit';
+
+/* ---------- toast / GPS ---------- */
+let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),1600)}
+function startGPS(){
+  if(!('geolocation' in navigator)){gpsState='none';renderGPS();return}
+  try{navigator.geolocation.watchPosition(p=>{fix={lat:+p.coords.latitude.toFixed(6),lon:+p.coords.longitude.toFixed(6),acc:Math.round(p.coords.accuracy),t:Date.now()};gpsState='fix';renderGPS()},
+    e=>{gpsState=e&&e.code===1?'blocked':'nofix';renderGPS()},{enableHighAccuracy:true,maximumAge:5000,timeout:20000})}
+  catch(e){gpsState='none';renderGPS()}
+}
+const liveFix=()=>fix&&Date.now()-fix.t<120000?fix:null;
+function renderGPS(){const p=$('#gpsPill');const f=liveFix();
+  if(f){p.textContent=`GPS ±${f.acc} m`;p.className='pill ok'}
+  else{p.textContent=gpsState==='blocked'?'GPS blocked':gpsState==='none'?'No GPS':'GPS no fix';p.className='pill bad'}}
+setInterval(renderGPS,15000);
+
+/* ---------- top bar ---------- */
+function renderTop(){
+  const st=active();
+  if(!st){$('#stnTitle').textContent='No station';$('#stnSub').textContent='Create one in Stations';return}
+  const h=st.h, rs=stRecs(st.id), fish=rs.filter(r=>!r.empty);
+  const recent=fish.filter(r=>Date.now()-new Date(r.ts).getTime()<15*60000).length*4;
+  $('#stnTitle').textContent=`${h.method} · Stn ${h.stationNo} · ${h.location||'—'}`;
+  $('#stnSub').textContent=`Day ${h.dayNo} · ${h.vessel||'—'} · ${fish.length} fish · ${fish.filter(r=>isRet(r)).length} retained · ${recent}/hr`;
+}
+
+/* ---------- entry rendering ---------- */
+function renderSpecies(){
+  const pr=PRESETS[S.preset]||PRESETS.west;$('#presetName').textContent=pr.name+' list';
+  const cur=S.cur.sp&&S.cur.sp.c;
+  $('#spgrid').innerHTML=pr.list.map((s,i)=>`<button class="btn sp" data-i="${i}" aria-pressed="${s.c===cur}"><span class="n">${esc(s.c)}</span><span class="s">${esc(s.s)}</span></button>`).join('');
+  $('#otherBox').hidden=!otherOpen; $('#otherBtn').textContent=otherOpen?'Close search':'Other species…';
+  if(otherOpen)renderOther();
+}
+function renderOther(){
+  const q=$('#otherQ').value.trim().toLowerCase(), pr=new Set((PRESETS[S.preset]||PRESETS.west).list.map(s=>s.c));
+  const l=allSpecies().filter(s=>!pr.has(s.c)&&(!q||s.c.toLowerCase().includes(q)||s.s.toLowerCase().includes(q)));
+  $('#otherList').innerHTML=l.map(s=>`<button class="btn sp" data-c="${esc(s.c)}" aria-pressed="${S.cur.sp&&S.cur.sp.c===s.c}"><span class="n">${esc(s.c)}</span><span class="s">${esc(s.s)}</span></button>`).join('')||'<span class="muted small">No match. Use "Unidentified fish" and add a comment.</span>';
+}
+function renderUnit(){
+  const st=active(),m=st?st.h.method:'Trap';
+  $('#unitLbl').textContent=unitLabel(); $('#unitVal').textContent=S.cur.unit;
+  $('#emptyBtn').textContent='Empty '+unitLabel().toLowerCase(); $('#recUnitTh').textContent=unitLabel();
+  const dl=m==='Dropline'; $('#hookRow').hidden=!dl;
+  if(dl)$('#hooks').innerHTML=Array.from({length:10},(_,i)=>`<button class="btn" data-h="${i+1}" aria-pressed="${S.cur.hook===i+1}">${i+1}</button>`).join('');
+}
+function renderLen(){
+  const c=S.cur;$('#lenVal').textContent=c.len===''?'—':c.len;
+  $('#curSp').innerHTML=c.sp?`${esc(c.sp.c)} <i>${esc(c.sp.s)}</i>`:'Pick a species';
+}
+function renderAttrs(){
+  const c=S.cur;
+  document.querySelectorAll('.seg[data-f]').forEach(g=>{const f=g.dataset.f;g.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(c[f]===b.dataset.v)))});
+  document.querySelectorAll('.seg[data-f="dr"] .btn').forEach(b=>b.disabled=c.fate!=='DIS'||c.teps);
+  document.querySelectorAll('.seg[data-f="rc"] .btn').forEach(b=>b.disabled=c.fate!=='DIS'&&!c.teps);
+  $('#tepsBtn').setAttribute('aria-pressed',String(!!c.teps));
+  $('#cmt').placeholder=c.teps?'Interaction description (required for TEPS)':'Fish comment (optional)';
+  let off={};
+  $('#sampSeg').innerHTML=SAMPLES.map(([k,l])=>{
+    const on=!!c.samp[k];let lab;
+    if(c.editId){const r=S.records.find(x=>x.id===c.editId);lab=on?(r&&r[k]?r[k]:'new serial'):'—'}
+    else lab=on?serialStr(S,k,S.serials[k].next):'next '+serialStr(S,k,S.serials[k].next);
+    return `<button class="btn samp" data-k="${k}" aria-pressed="${on}">${l}<small>${esc(lab)}</small></button>`}).join('');
+  $('#cmt').value=c.cmt;
+  const w=$('#warnBox');w.hidden=!c.warn;w.textContent=c.warn;
+  const e=$('#enterBtn');e.className='btn enter'+(c.ack?' confirm':c.editId?' edit':'');
+  e.textContent=c.ack?'Confirm & enter':c.editId?'Save changes':'Enter';
+  $('#undoBtn').textContent=c.editId?'Cancel edit':'Undo last';
+  $('#emptyBtn').disabled=!!c.editId;
+}
+function isRet(r){return r.fate==='RET'||r.fate==='BT'}
+function fateHTML(r){
+  let s=r.fate==='RET'?'<span class="tag ret">RET</span>':r.fate==='BT'?'<span class="tag ret">BT</span>':r.fate==='DIS'?`<span class="tag dis">DIS${r.dr?' '+r.dr:''}${r.rc?' · '+r.rc:''}</span>`:esc(r.fate);
+  if(r.teps)s+=' <span class="tag teps">TEPS</span>';return s}
+const fateFor=sp=>(sp&&sp.teps)?'DIS':(sp&&sp.d)||S.defFate||'RET';
+function sampList(r){return SAMPLES.filter(([k])=>r[k]).map(([k])=>r[k]).join(' ')}
+function rowHTML(r,showHook){
+  if(r.empty)return `<tr class="empty${S.cur.editId===r.id?' sel':''}" data-id="${r.id}"><td class="mono">${r.seq}</td><td class="mono">${r.unit}</td><td colspan="6">Empty ${esc(unitLabel().toLowerCase())}</td><td class="mono">${hhmm(r.ts)}</td></tr>`;
+  const u=showHook&&r.hook?`${r.unit}·h${r.hook}`:r.unit;
+  return `<tr data-id="${r.id}" class="${S.cur.editId===r.id?'sel':''}"><td class="mono">${r.seq}</td><td class="mono">${u}</td><td>${esc(r.species)}</td><td class="mono">${r.fl_mm===''?'—':r.fl_mm}</td><td>${r.sex}</td>`+
+    `<td>${fateHTML(r)}</td><td>${r.dep==='N'?'—':`<span class="tag dep">${r.dep==='P'?'Partial':'Whole'}</span>`}</td><td class="mono">${esc(sampList(r))||'—'}</td><td class="mono">${hhmm(r.ts)}</td></tr>`;
+}
+function renderRecent(){
+  const st=active();if(!st){$('#recentBody').innerHTML='';return}
+  const rs=stRecs(st.id),dl=st.h.method==='Dropline';
+  $('#recentBody').innerHTML=rs.slice(-10).reverse().map(r=>rowHTML(r,dl)).join('')||`<tr class="empty"><td colspan="9">No records yet. Pick a species, key the length, tap Enter.</td></tr>`;
+  $('#recentCount').textContent=`${rs.length} records in this station`;
+}
+function renderEntry(){renderSpecies();renderUnit();renderLen();renderAttrs();renderRecent();renderTop()}
+
+/* keypad */
+$('#keypad').innerHTML=['1','2','3','4','5','6','7','8','9','CLR','0','DEL'].map(k=>`<button class="btn${k.length>1?' fn':''}" data-k="${k}">${k==='CLR'?'Clear':k==='DEL'?'⌫ Back':k}</button>`).join('');
+function key(k){const c=S.cur;
+  if(k==='CLR')c.len='';else if(k==='DEL')c.len=c.len.slice(0,-1);else if(c.len.length<4)c.len=(c.len+k).replace(/^0+/,'');
+  c.ack=false;c.warn='';renderLen();renderAttrs()}
+
+/* ---------- commit ---------- */
+function resetFish(){const c=S.cur;Object.assign(c,{len:'',sex:'U',fate:fateFor(c.sp),dr:'',rc:'',teps:!!(c.sp&&c.sp.teps),dep:'N',samp:{},cmt:'',editId:null,ack:false,warn:''})}
+function pickSpecies(s){const c=S.cur;c.sp=s;c.ack=false;if(!c.editId){c.warn='';c.fate=fateFor(s);c.teps=!!s.teps;if(c.fate!=='DIS'){c.dr='';c.rc=''}}}
+function warn(m,confirmable){S.cur.warn=m;S.cur.ack=!!confirmable;renderAttrs()}
+function commit(){
+  const c=S.cur,st=active();
+  if(!st){toast('Create a station first');return}
+  if(!c.sp){warn('Pick a species first.');return}
+  const len=c.len===''?'':parseInt(c.len,10);
+  if(len===''&&c.dep==='N'&&!c.teps){warn('Key in a fork length. Length can be blank only for a depredated fish or a TEPS interaction.');return}
+  if(c.fate==='DIS'&&!c.teps&&!c.dr){warn('Discarded fish need a discard reason (NS, NE, PQ or DD).');return}
+  if((c.fate==='DIS'||c.teps)&&!c.rc){warn('Pick a release condition (AU, AI, DD or UN).');return}
+  if(c.teps&&!c.cmt.trim()){warn('Describe the TEPS interaction in the comment box.');$('#cmt').focus();return}
+  const dr=c.fate==='DIS'&&!c.teps?c.dr:'',rc=(c.fate==='DIS'||c.teps)?c.rc:'';
+  if(len!==''&&!c.ack&&(len<40||len>c.sp.max)){warn(`${len} mm is outside the expected range for ${c.sp.c} (40–${c.sp.max} mm). Tap again to confirm.`,true);return}
+  const f=liveFix();
+  if(c.editId){
+    const r=S.records.find(x=>x.id===c.editId);if(!r){resetFish();renderEntry();return}
+    const voided=[];
+    SAMPLES.forEach(([k])=>{if(c.samp[k]&&!r[k])r[k]=serialStr(S,k,S.serials[k].next++);else if(!c.samp[k]&&r[k]){voided.push(r[k]);r[k]=''}});
+    Object.assign(r,{unit:c.unit,hook:st.h.method==='Dropline'?c.hook:'',species:c.sp.c,sci:c.sp.s,caab:c.sp.caab,fl_mm:len,sex:c.sex,fate:c.fate,dr,rc,teps:!!c.teps,dep:c.dep,comment:c.cmt,
+      edited:new Date().toISOString()+(voided.length?` voided:${voided.join(' ')}`:'')});
+    save();resetFish();if(editFrom==='list'){editFrom=null;show('list')}else renderEntry();toast('Record #'+r.seq+' updated');return;
+  }
+  const r={id:uid(),station:st.id,device:S.device,seq:++st.seq,ts:new Date().toISOString(),unit:c.unit,hook:st.h.method==='Dropline'?c.hook:'',
+    empty:false,species:c.sp.c,sci:c.sp.s,caab:c.sp.caab,fl_mm:len,sex:c.sex,fate:c.fate,dr,rc,teps:!!c.teps,dep:c.dep,oto:'',gon:'',fin:'',sto:'',
+    lat:f?f.lat:'',lon:f?f.lon:'',comment:c.cmt,edited:''};
+  SAMPLES.forEach(([k])=>{if(c.samp[k])r[k]=serialStr(S,k,S.serials[k].next++)});
+  S.records.push(r);save();
+  const s=sampList(r);resetFish();renderEntry();
+  const b=$('#enterBtn');b.classList.remove('flash');void b.offsetWidth;b.classList.add('flash');
+  toast(`#${r.seq} ${r.species} ${r.fl_mm===''?'no length':r.fl_mm+' mm'}${s?' · '+s:''}`);
+}
+function logEmpty(){
+  const st=active();if(!st)return;const f=liveFix();
+  S.records.push({id:uid(),station:st.id,device:S.device,seq:++st.seq,ts:new Date().toISOString(),unit:S.cur.unit,hook:'',empty:true,species:'EMPTY',sci:'',caab:'',
+    fl_mm:'',sex:'',fate:'',dr:'',rc:'',teps:false,dep:'',oto:'',gon:'',fin:'',sto:'',lat:f?f.lat:'',lon:f?f.lon:'',comment:'',edited:''});
+  toast(`${unitLabel()} ${S.cur.unit} logged empty`);S.cur.unit++;save();renderEntry();
+}
+function rollback(r){SAMPLES.forEach(([k])=>{if(r[k]&&r[k]===serialStr(S,k,S.serials[k].next-1))S.serials[k].next--})}
+function removeRec(r){rollback(r);S.records=S.records.filter(x=>x.id!==r.id)}
+
+/* two-tap confirm */
+function armed(btn,label,fn){
+  if(btn.dataset.armed==='1'){btn.dataset.armed='';btn.classList.remove('armed');fn();return}
+  const old=btn.textContent;btn.dataset.armed='1';btn.classList.add('armed');btn.textContent=label;
+  setTimeout(()=>{if(btn.dataset.armed==='1'){btn.dataset.armed='';btn.classList.remove('armed');btn.textContent=old}},3000);
+}
+function startEdit(id,from){
+  const r=S.records.find(x=>x.id===id);if(!r||r.empty){if(r&&r.empty){armedDeleteEmpty(r)}return}
+  const s=allSpecies().find(x=>x.c===r.species)||{c:r.species,s:r.sci,max:4000,caab:r.caab};
+  Object.assign(S.cur,{sp:s,len:r.fl_mm===''?'':String(r.fl_mm),sex:r.sex,fate:r.fate,dr:r.dr||'',rc:r.rc||'',teps:!!r.teps,dep:r.dep,cmt:r.comment,unit:r.unit,hook:r.hook||S.cur.hook,
+    samp:Object.fromEntries(SAMPLES.map(([k])=>[k,!!r[k]])),editId:r.id,ack:false,warn:`Editing record #${r.seq}. Save changes, or Cancel edit.`});
+  editFrom=from||null;show('entry');
+}
+function armedDeleteEmpty(r){toast('Empty records: delete from Full list');}
+
+/* ---------- events: entry ---------- */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('button,tr[data-id]');if(!t)return;
+  if(t.matches('#nav button')){show(t.dataset.v);return}
+  if(view!=='entry')return;
+  if(t.matches('#spgrid .sp')){pickSpecies((PRESETS[S.preset]||PRESETS.north).list[+t.dataset.i]);renderSpecies();renderLen();renderAttrs();save();return}
+  if(t.matches('#otherList .sp')){pickSpecies(allSpecies().find(x=>x.c===t.dataset.c));otherOpen=false;renderSpecies();renderLen();renderAttrs();save();return}
+  if(t.id==='tepsBtn'){const c=S.cur;c.teps=!c.teps;if(c.teps){c.fate='DIS';c.dr=''}renderAttrs();return}
+  if(t.id==='otherBtn'){otherOpen=!otherOpen;renderSpecies();if(otherOpen)$('#otherQ').focus();return}
+  if(t.matches('#keypad .btn')){key(t.dataset.k);return}
+  if(t.id==='unitUp'){S.cur.unit++;renderUnit();save();return}
+  if(t.id==='unitDn'){S.cur.unit=Math.max(1,S.cur.unit-1);renderUnit();save();return}
+  if(t.matches('#hooks .btn')){S.cur.hook=+t.dataset.h;renderUnit();save();return}
+  const seg=t.closest('.seg[data-f]');
+  if(seg){const c=S.cur,f=seg.dataset.f,v=t.dataset.v;
+    c[f]=(f==='dr'||f==='rc')&&c[f]===v?'':v;
+    if(f==='fate'&&v!=='DIS'){c.dr='';if(!c.teps)c.rc=''}
+    if(f==='fate'&&v==='DIS')SAMPLES.forEach(([k])=>{if(k!=='fin')c.samp[k]=false});
+    if(f==='dr'&&v==='DD'&&c.dr==='DD')c.rc='DD';
+    if(c.warn&&!c.ack&&!c.editId)c.warn='';renderAttrs();return}
+  if(t.matches('#sampSeg .samp')){const c=S.cur,k=t.dataset.k;c.samp[k]=!c.samp[k];
+    if(c.samp[k]&&k!=='fin'&&c.fate==='DIS'){c.fate='RET';c.dr='';if(!c.teps)c.rc=''}renderAttrs();return}
+  if(t.id==='enterBtn'){commit();return}
+  if(t.id==='emptyBtn'){logEmpty();return}
+  if(t.id==='undoBtn'){
+    if(S.cur.editId){resetFish();if(editFrom==='list'){editFrom=null;show('list')}else renderEntry();return}
+    const st=active();const rs=st?stRecs(st.id):[];const last=rs[rs.length-1];if(!last){toast('Nothing to undo');return}
+    armed(t,`Delete #${last.seq}?`,()=>{removeRec(last);if(last.empty)S.cur.unit=last.unit;save();renderEntry();toast(`Removed #${last.seq}`)});return}
+  if(t.matches('#recentBody tr[data-id]')){startEdit(t.dataset.id);return}
+});
+$('#cmt').addEventListener('input',e=>{S.cur.cmt=e.target.value});
+$('#otherQ').addEventListener('input',renderOther);
+document.addEventListener('keydown',e=>{
+  if(view!=='entry')return;const tg=e.target.tagName;if(tg==='INPUT'||tg==='TEXTAREA'||tg==='SELECT')return;
+  if(/^[0-9]$/.test(e.key)){key(e.key);e.preventDefault()}
+  else if(e.key==='Backspace'){key('DEL');e.preventDefault()}
+  else if(e.key==='Escape'){key('CLR')}
+  else if(e.key==='Enter'){commit();e.preventDefault()}
+});
+
+/* ---------- other views ---------- */
+const other=$('#v-other');
+function show(v){
+  view=v;document.querySelectorAll('#nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===v?'page':'false'));
+  $('#v-entry').hidden=v!=='entry';other.hidden=v==='entry';
+  if(v==='entry')renderEntry();else({list:viewList,header:viewHeader,stations:viewStations,export:viewExport,setup:viewSetup})[v]();
+  renderTop();$('#main').scrollTop=0;
+}
+
+function viewList(){
+  const st=active();if(!st){other.innerHTML='<h2>Full list</h2><p class="note">No active station.</p>';return}
+  const rs=stRecs(st.id),fish=rs.filter(r=>!r.empty),tally={};
+  fish.forEach(r=>{tally[r.species]=tally[r.species]||[0,0];tally[r.species][0]++;if(isRet(r))tally[r.species][1]++});
+  other.innerHTML=`<h2>Full list · Station ${esc(st.h.stationNo)}</h2>
+  <div class="tally">${Object.entries(tally).sort((a,b)=>b[1][0]-a[1][0]).map(([k,v])=>`<span>${esc(k)} <b>${v[0]}</b> <span class="muted small">(${v[1]} ret)</span></span>`).join('')||'<span>No fish yet</span>'}</div>
+  <p class="note">Tap a fish to edit it on the entry screen. Empty-unit records can be deleted here.</p>
+  <div class="panel"><div class="tblwrap"><table><thead><tr><th>#</th><th>${unitLabel()}</th><th>Species</th><th>FL mm</th><th>Sex</th><th>Fate</th><th>Depred.</th><th>Samples</th><th>Time</th></tr></thead>
+  <tbody id="fullBody">${rs.slice().reverse().map(r=>rowHTML(r,st.h.method==='Dropline')).join('')}</tbody></table></div></div>
+  <div class="actions"><button class="btn danger" id="delSel" hidden>Delete selected record</button></div>`;
+  let sel=null;
+  other.querySelector('#fullBody').onclick=e=>{const tr=e.target.closest('tr[data-id]');if(!tr)return;const r=S.records.find(x=>x.id===tr.dataset.id);
+    if(r&&!r.empty){startEdit(r.id,'list');return}
+    sel=r;other.querySelectorAll('#fullBody tr').forEach(x=>x.classList.toggle('sel',x===tr));const b=$('#delSel');b.hidden=false;b.textContent=`Delete empty record #${r.seq}`};
+  other.querySelector('#delSel').onclick=e=>armed(e.target,'Tap again to delete',()=>{if(sel){removeRec(sel);save();viewList();toast('Deleted')}});
+}
+
+function fieldHTML(f,h){
+  if(f.sec)return `<div class="field wide sechead"><span class="lbl">${esc(f.sec)}</span></div>`;
+  const v=h[f.k]==null?'':h[f.k],id='h_'+f.k;
+  let inp;
+  if(f.t==='select')inp=`<select id="${id}">${f.o.map(o=>`<option${o===v?' selected':''}>${esc(o)}</option>`).join('')}</select>`;
+  else if(f.t==='textarea')inp=`<textarea id="${id}">${esc(v)}</textarea>`;
+  else inp=`<input id="${id}" type="${f.t||'text'}" ${f.t==='number'?'inputmode="decimal" step="any"':''} value="${esc(v)}">`;
+  return `<div class="field${f.wide?' wide':''}"><label for="${id}">${esc(f.l)}</label>${inp}</div>`;
+}
+function viewHeader(isNew){
+  const st=active(),h=isNew?isNew:(st?st.h:defaultHeader());
+  other.innerHTML=`<h2>${isNew?'Add station(s)':'Station header'}</h2>
+  ${isNew?`<div class="panel"><div class="form"><div class="field"><label for="h_batch">Stations to create</label><input id="h_batch" type="number" inputmode="numeric" min="1" max="30" value="1"></div>
+   <p class="note" style="grid-column:span 2;align-self:end">Creates consecutive station numbers that share these details. Edit depth or position on each one later if they differ.</p></div></div>`:''}
+  <div class="panel"><div class="form">${HF.map(f=>fieldHTML(f,h)).join('')}</div></div>
+  <div class="panel"><span class="lbl">Set and haul (time + position)</span>
+   <p class="note">Tap Stamp to take the iPad clock and current GPS fix. Positions can also be typed in decimal degrees (south is negative).</p>
+   ${STAMPS.map(s=>`<div class="stamp">
+     ${fieldHTML({k:s+'_time',l:(s==='set'?'Set':'Haul')+' time',t:'datetime-local'},h)}
+     ${fieldHTML({k:s+'_lat',l:'Latitude',t:'number'},h)}
+     ${fieldHTML({k:s+'_lon',l:'Longitude',t:'number'},h)}
+     <button class="btn" data-stamp="${s}">Stamp ${s} now</button></div>`).join('')}
+  </div>
+  <div class="actions"><button class="btn primary" id="hSave">${isNew?'Create station':'Save header'}</button><button class="btn" id="hCancel">Cancel</button></div>`;
+  other.querySelectorAll('[data-stamp]').forEach(b=>b.onclick=()=>{const s=b.dataset.stamp,f=liveFix();
+    $('#h_'+s+'_time').value=localDT(new Date());if(f){$('#h_'+s+'_lat').value=f.lat;$('#h_'+s+'_lon').value=f.lon;toast('Time and position stamped')}else toast('Time stamped. No GPS fix, enter position by hand')});
+  $('#hSave').onclick=()=>{
+    const keys=[...HFK.map(f=>f.k),...STAMPS.flatMap(s=>[s+'_time',s+'_lat',s+'_lon'])],nh={};
+    keys.forEach(k=>{const el=$('#h_'+k);nh[k]=el?el.value:''});
+    ['dayNo','stationNo','lineNo','units','firstUnit'].forEach(k=>{if(nh[k]!=='')nh[k]=+nh[k]});
+    const autoOp=!nh.opnum||nh.opnum===makeOpnum(Object.assign({},h,{date:nh.date,stationNo:nh.stationNo}));
+    if(autoOp)nh.opnum=makeOpnum(nh);
+    if(!nh.moon)nh.moon=moonPhase(nh.date);
+    if(isNew){
+      const n=Math.min(30,Math.max(1,parseInt($('#h_batch').value,10)||1));let first=null;
+      for(let i=0;i<n;i++){const h2=Object.assign({},nh);if(h2.stationNo!=='')h2.stationNo=+nh.stationNo+i;if(autoOp)h2.opnum=makeOpnum(h2);
+        const ns={id:uid(),h:h2,created:new Date().toISOString(),seq:0};S.stations.push(ns);if(!first)first=ns}
+      activate(first.id);S.cur.hook=1;save();toast(n===1?'Station added':`${n} stations added`);show('stations')}
+    else{st.h=nh;save();toast('Header saved');show('stations')}
+  };
+  $('#hCancel').onclick=()=>show('stations');
+}
+
+function soak(h){if(!h.set_time||!h.haul_time)return '';const m=(new Date(h.haul_time)-new Date(h.set_time))/60000;return isFinite(m)?Math.round(m):''}
+function status(st){if(st.done)return ['Complete','ok'];return stRecs(st.id).length?['In progress','prog']:['Ready','ready']}
+function activate(id){S.active=id;const st=active();const rs=stRecs(id);const last=rs[rs.length-1];
+  S.cur.unit=last?last.unit:(+st.h.firstUnit||1);resetFish();save()}
+function viewStations(){
+  const st=active();
+  const sorted=S.stations.slice().sort((a,b)=>String(b.h.date).localeCompare(String(a.h.date))||(+a.h.dayNo||0)-(+b.h.dayNo||0)||(+a.h.stationNo||0)-(+b.h.stationNo||0));
+  other.innerHTML=`<h2>Stations</h2>
+  <p class="note">Set up the day's stations here before you start, then tap <b>Enter data</b> on a station when it comes aboard. Tap a row to select it for editing.</p>
+  <div class="actions">
+    <button class="btn primary" id="newSt">Add station(s)</button>
+    <button class="btn" id="editSt"${st?'':' disabled'}>Edit header</button>
+    <button class="btn" id="doneSt"${st?'':' disabled'}>${st&&st.done?'Reopen station':'Mark complete'}</button>
+    <button class="btn danger" id="delSt"${st&&!stRecs(st.id).length?'':' hidden'}>Delete empty station</button>
+  </div>
+  <div class="panel"><div class="tblwrap"><table><thead><tr><th></th><th>Status</th><th>Date</th><th>Day</th><th>Stn</th><th>Method</th><th>OPNUM</th><th>Location</th><th>Depth m</th><th>Fish</th><th>Ret.</th><th>Soak</th><th></th></tr></thead>
+  <tbody>${sorted.map(s=>{const rs=stRecs(s.id),f=rs.filter(r=>!r.empty),[lab,cls]=status(s);
+    return `<tr data-st="${s.id}" class="${s.id===S.active?'sel':''}"><td>${s.id===S.active?'●':''}</td><td><span class="stat ${cls}">${lab}</span></td><td class="mono">${esc(s.h.date)}</td><td class="mono">${esc(s.h.dayNo)}</td><td class="mono">${esc(s.h.stationNo)}</td><td>${esc(s.h.method)}</td><td class="mono">${esc(s.h.opnum)}</td><td>${esc(s.h.location)}</td><td class="mono">${esc(s.h.depth!=null?s.h.depth:s.h.depthMin)}</td><td class="mono">${f.length}</td><td class="mono">${f.filter(r=>isRet(r)).length}</td><td class="mono">${soak(s.h)}</td>
+    <td><button class="btn go" data-go="${s.id}">Enter data</button></td></tr>`}).join('')||'<tr class="empty"><td colspan="13">No stations yet. Tap Add station(s).</td></tr>'}</tbody></table></div></div>`;
+  other.querySelectorAll('tr[data-st]').forEach(tr=>tr.onclick=e=>{if(e.target.closest('[data-go]'))return;activate(tr.dataset.st);viewStations();renderTop()});
+  other.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{activate(b.dataset.go);show('entry')});
+  $('#newSt').onclick=()=>{const h=Object.assign({},st?st.h:defaultHeader());
+    h.stationNo=Math.max(0,...S.stations.filter(s=>s.h.date===h.date&&String(s.h.dayNo)===String(h.dayNo)).map(s=>+s.h.stationNo||0))+1;
+    STAMPS.forEach(s=>{h[s+'_time']='';h[s+'_lat']='';h[s+'_lon']=''});h.comment='';h.opnum='';h.moon='';viewHeader(h)};
+  $('#editSt').onclick=()=>show('header');
+  $('#doneSt').onclick=()=>{st.done=!st.done;save();viewStations();if(st.done){saveCsv('flat','active','backup')}else toast('Station reopened')};
+  const d=$('#delSt');if(d)d.onclick=e=>armed(e.target,'Tap again to delete',()=>{S.stations=S.stations.filter(x=>x.id!==st.id);S.active=S.stations.length?S.stations[0].id:null;save();viewStations();renderTop();toast('Station deleted')});
+}
+
+/* export */
+const q=v=>{v=v==null?'':String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+const HKEYS=[...HFK.map(f=>f.k),'set_time','set_lat','set_lon','haul_time','haul_lat','haul_lon'];
+const RKEYS=['id','station','device','seq','ts','unit','hook','empty','species','sci','caab','fl_mm','sex','fate','dr','rc','teps','dep','oto','gon','fin','sto','lat','lon','comment','edited'];
+const RNAMES={id:'record_id',station:'station_id',seq:'record_no',ts:'timestamp',empty:'empty_unit',sci:'scientific_name',caab:'caab_code',dr:'discard_reason',rc:'release_condition',teps:'teps_interaction',dep:'depredation',oto:'otolith_id',gon:'gonad_id',fin:'finclip_id',sto:'stomach_id',comment:'comment_or_interaction'};
+function csv(kind,scope){
+  const sts=scope==='all'?S.stations:S.stations.filter(s=>s.id===S.active),ids=new Set(sts.map(s=>s.id));
+  const recs=S.records.filter(r=>ids.has(r.station));
+  const hrow=st=>[st.id,S.device,...HKEYS.map(k=>st.h[k]),soak(st.h)];
+  const hcols=['station_id','device',...HKEYS,'soak_min'];
+  const rrow=r=>RKEYS.map(k=>k==='empty'||k==='teps'?(r[k]?'Y':'N'):r[k]);
+  const rcols=RKEYS.map(k=>RNAMES[k]||k);
+  let rows;
+  if(kind==='stations')rows=[hcols,...sts.map(hrow)];
+  else if(kind==='fish')rows=[rcols,...recs.map(rrow)];
+  else{const m=Object.fromEntries(sts.map(s=>[s.id,s]));rows=[[...hcols,rcols[0],...rcols.slice(3)],...recs.map(r=>{const rr=rrow(r);return [...hrow(m[r.station]),rr[0],...rr.slice(3)]})]}
+  return rows.map(r=>r.map(q).join(',')).join('\n');
+}
+let exKind='flat',exScope='active';
+function viewExport(){
+  const top=window.top===window.self;
+  const txt=csv(exKind,exScope);
+  other.innerHTML=`<h2>Export</h2>
+  <div class="tabs">${[['flat','Flat (one row per fish)'],['fish','Fish table'],['stations','Station table']].map(([k,l])=>`<button class="btn" data-ex="${k}" aria-pressed="${exKind===k}">${l}</button>`).join('')}</div>
+  <div class="tabs">${[['active','Active station'],['all','All stations']].map(([k,l])=>`<button class="btn" data-sc="${k}" aria-pressed="${exScope===k}">${l}</button>`).join('')}</div>
+  <p class="note">Flat repeats the station header on every fish, like the lobster export. Fish and Station tables link on <b>station_id</b> for joining in R. Every record carries a unique record_id and the device ID, so files from several iPads combine without duplicates.</p>
+  <textarea class="csv" id="csvOut" readonly aria-label="CSV output">${esc(txt)}</textarea>
+  <div class="actions"><button class="btn primary" id="copyCsv">Copy CSV</button>${top?'<button class="btn" id="dlCsv">Save CSV file</button>':''}</div>
+  ${top?'':'<p class="note">In this preview, use Copy. The installed version also saves the CSV to Files or shares it to Mail.</p>'}`;
+  other.querySelectorAll('[data-ex]').forEach(b=>b.onclick=()=>{exKind=b.dataset.ex;viewExport()});
+  other.querySelectorAll('[data-sc]').forEach(b=>b.onclick=()=>{exScope=b.dataset.sc;viewExport()});
+  $('#copyCsv').onclick=()=>{const ta=$('#csvOut');const p=navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(ta.value):Promise.reject();
+    p.then(()=>toast('CSV copied')).catch(()=>{ta.focus();ta.select();toast('Selected. Use the system Copy')})};
+  if(top)$('#dlCsv').onclick=()=>saveCsv(exKind,exScope);
+  if(false)(async()=>{
+    const st=active(),name='',blob=null;
+    try{const file=new File([blob],name,{type:'text/csv'});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return}}catch(e){}
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
+  })();
+}
+async function saveCsv(kind,scope,tag){
+  const st=active(),txt=csv(kind,scope);
+  const name=`catch_${tag?tag+'_':''}${kind}_${(st&&st.h.opnum)||(st&&st.h.date)||'data'}_${S.device}.csv`;
+  const blob=new Blob([txt],{type:'text/csv'});
+  try{const file=new File([blob],name,{type:'text/csv'});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});toast(tag?'Station complete. Backup saved':'CSV shared');return}}
+  catch(e){if(e&&e.name==='AbortError'){toast(tag?'Station complete. Backup skipped':'Cancelled');return}}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
+  toast(tag?'Station complete. Backup saved':'CSV saved');
+}
+
+function viewSetup(){
+  other.innerHTML=`<h2>Setup</h2>
+  <div class="panel"><div class="form">
+    <div class="field"><label for="s_dev">Device ID</label><input id="s_dev" value="${esc(S.device)}"></div>
+    <div class="field"><label for="s_pre">Quick species list</label><select id="s_pre">${Object.entries(PRESETS).map(([k,p])=>`<option value="${k}"${S.preset===k?' selected':''}>${p.name}</option>`).join('')}</select></div>
+    <div class="field"><label for="s_fate">Default fate after each fish</label><select id="s_fate">${[['RET','Retained'],['BT','Retained for bait (BT)'],['DIS','Discarded']].map(([v,l])=>`<option value="${v}"${(S.defFate||'RET')===v?' selected':''}>${l}</option>`).join('')}</select></div>
+  </div></div>
+  <div class="panel"><span class="lbl">Sample serials</span>
+   <p class="note">Set the prefix and the next number to match your pre-printed labels. Give each iPad its own prefix or number block so serials never collide.</p>
+   <div class="form">${SAMPLES.map(([k,l])=>`<div class="field"><label for="s_${k}p">${l} prefix</label><input id="s_${k}p" value="${esc(S.serials[k].prefix)}"></div><div class="field"><label for="s_${k}n">${l} next no</label><input id="s_${k}n" type="number" inputmode="numeric" value="${S.serials[k].next}"></div>`).join('')}</div>
+  </div>
+  <div class="actions"><button class="btn primary" id="sSave">Save setup</button></div>
+  <div class="panel"><span class="lbl">Data on this iPad</span>
+   <p class="note">${S.records.length} records in ${S.stations.length} station(s). Export before clearing anything.</p>
+   <div class="actions"><button class="btn danger" id="clrEx">Clear example data</button><button class="btn danger" id="clrAll">Clear all data</button></div></div>`;
+  $('#sSave').onclick=()=>{S.device=$('#s_dev').value.trim()||S.device;S.preset=$('#s_pre').value;S.defFate=$('#s_fate').value;
+    SAMPLES.forEach(([k])=>{S.serials[k].prefix=$('#s_'+k+'p').value.trim();S.serials[k].next=Math.max(1,parseInt($('#s_'+k+'n').value,10)||1)});
+    save();renderTop();toast('Setup saved')};
+  $('#clrEx').onclick=e=>armed(e.target,'Tap again to clear examples',()=>{
+    const ex=new Set(S.stations.filter(s=>s.example).map(s=>s.id));
+    S.records=S.records.filter(r=>!ex.has(r.station));S.stations=S.stations.filter(s=>!s.example);
+    SAMPLES.forEach(([k])=>S.serials[k].next=1);
+    if(!S.stations.length){const h=defaultHeader();Object.assign(h,{vessel:'',location:'',subarea:'',comment:''});const ns={id:uid(),h,created:new Date().toISOString(),seq:0};S.stations.push(ns)}
+    S.active=S.stations[S.stations.length-1].id;S.cur.unit=1;resetFish();save();viewSetup();renderTop();toast('Example data cleared')});
+  $('#clrAll').onclick=e=>armed(e.target,'Tap again to erase everything',()=>{
+    const dev=S.device,ser=S.serials,pre=S.preset;S=fresh();S.device=dev;S.preset=pre;
+    S.records=[];const h=defaultHeader();Object.assign(h,{vessel:'',location:'',subarea:'',comment:''});S.stations=[{id:uid(),h,created:new Date().toISOString(),seq:0}];
+    S.active=S.stations[0].id;S.serials=ser;S.cur.unit=1;resetFish();save();viewSetup();renderTop();toast('All data cleared')});
+}
+
+/* ---------- boot ---------- */
+S=load()||fresh();
+if(!S.cur)S.cur=fresh().cur;
+document.addEventListener('pointerdown',function wl(){try{navigator.wakeLock&&navigator.wakeLock.request('screen').catch(()=>{})}catch(e){}},{once:true});
+save();startGPS();renderGPS();show('stations');
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').then(r=>{
+  r.addEventListener('updatefound',()=>{const w=r.installing;w&&w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller){const t=document.getElementById('toast');if(t){t.textContent='Update downloaded. Close and reopen the app to use it.';t.classList.add('on');setTimeout(()=>t.classList.remove('on'),6000)}}})});
+}).catch(()=>{})})}
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+</script>
+</body>
+</html>

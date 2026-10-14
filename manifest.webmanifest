@@ -1,0 +1,16 @@
+{
+  "name": "Catch Logger",
+  "short_name": "Catch Logger",
+  "description": "Offline tap-pad logger for demersal fish surveys",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#e8edf0",
+  "theme_color": "#0a6a85",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
