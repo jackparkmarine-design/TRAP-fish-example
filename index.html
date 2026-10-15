@@ -113,6 +113,12 @@ main{overflow:auto;padding-inline:16px;padding-block:0 16px;min-height:0}
 .code small{font-family:var(--f-body);font-size:11px;font-weight:500;opacity:.8}
 .seg .btn:disabled{opacity:.3}
 .seg[data-f="fate"] .btn{font-size:15px;line-height:1.1}
+.posbtn{min-height:40px;font-size:13.5px;font-weight:500;font-family:var(--f-mono);text-align:left;padding:4px 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.posbtn.missing{border-color:var(--warn);color:var(--warn);background:var(--warn-soft);font-family:var(--f-body);font-weight:600}
+.pin{min-height:42px;width:100%;min-width:150px;border:1px solid var(--line);border-radius:8px;background:var(--raised);padding:0 10px;font-family:var(--f-mono);font-size:14px}
+.pin.bad{border-color:var(--danger);background:var(--danger-soft)}
+.stampbtn{min-height:42px;padding:0 12px;font-size:14px}
+.imprev{max-height:240px;overflow:auto}
 .tepsrow{display:grid;grid-template-columns:auto 1fr;gap:6px}
 .tepsrow .btn{min-height:44px;padding:0 12px;font-size:14px}
 #tepsBtn[aria-pressed="true"]{background:var(--danger);border-color:var(--danger);color:var(--raised)}
@@ -185,6 +191,7 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
     <nav class="nav" id="nav">
       <button data-v="stations" aria-current="page">Stations</button>
       <button data-v="entry">Data entry</button>
+      <button data-v="positions">Positions</button>
       <button data-v="list">Full list</button>
       <button data-v="header">Header</button>
       <button data-v="export">Export</button>
@@ -210,6 +217,7 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
           <output class="unitval" id="unitVal">1</output>
           <button class="btn step" id="unitUp" aria-label="Next unit">▲</button>
         </div>
+        <button class="btn posbtn" id="posBtn"></button>
         <div class="group" id="hookRow" hidden>
           <span class="lbl">Hook position (1 = shallowest)</span>
           <div class="hooks" id="hooks"></div>
@@ -388,6 +396,7 @@ function fresh(){
     (e[8]||[]).forEach(k=>{r[k]=serialStr(s,k,s.serials[k].next++)});
     s.records.push(r);
   });
+  st.pos={};[[1,-19.407213,121.560412],[2,-19.408890,121.561870],[3,-19.410532,121.563301]].forEach(([u,a,b])=>st.pos[u]={lat:a,lon:b,src:'Example',t:''});
   s.cur.unit=4; s.cur.sp=PRESETS.north.list[0];
   [2,3].forEach(n=>{const h=Object.assign(defaultHeader(),{stationNo:n,depth:n===2?58:71});h.opnum=makeOpnum(h);
     s.stations.push({id:uid(),h,created:new Date().toISOString(),example:true,seq:0})});
@@ -442,6 +451,9 @@ function renderUnit(){
   const st=active(),m=st?st.h.method:'Trap';
   $('#unitLbl').textContent=unitLabel(); $('#unitVal').textContent=S.cur.unit;
   $('#emptyBtn').textContent='Empty '+unitLabel().toLowerCase(); $('#recUnitTh').textContent=unitLabel();
+  const pb=$('#posBtn'),p=st&&st.pos&&st.pos[S.cur.unit];
+  if(p&&p.lat!==''&&p.lat!=null){pb.textContent=`${unitLabel()} ${S.cur.unit}  ${fmtDM(p.lat,true)}  ${fmtDM(p.lon,false)}`;pb.className='btn posbtn'}
+  else{pb.textContent=`${unitLabel()} ${S.cur.unit}: no position. Tap to add`;pb.className='btn posbtn missing'}
   const dl=m==='Dropline'; $('#hookRow').hidden=!dl;
   if(dl)$('#hooks').innerHTML=Array.from({length:10},(_,i)=>`<button class="btn" data-h="${i+1}" aria-pressed="${S.cur.hook===i+1}">${i+1}</button>`).join('');
 }
@@ -562,6 +574,7 @@ document.addEventListener('click',e=>{
   if(t.id==='tepsBtn'){const c=S.cur;c.teps=!c.teps;if(c.teps){c.fate='DIS';c.dr=''}renderAttrs();return}
   if(t.id==='otherBtn'){otherOpen=!otherOpen;renderSpecies();if(otherOpen)$('#otherQ').focus();return}
   if(t.matches('#keypad .btn')){key(t.dataset.k);return}
+  if(t.id==='posBtn'){posFocus=S.cur.unit;show('positions');return}
   if(t.id==='unitUp'){S.cur.unit++;renderUnit();save();return}
   if(t.id==='unitDn'){S.cur.unit=Math.max(1,S.cur.unit-1);renderUnit();save();return}
   if(t.matches('#hooks .btn')){S.cur.hook=+t.dataset.h;renderUnit();save();return}
@@ -597,7 +610,7 @@ const other=$('#v-other');
 function show(v){
   view=v;document.querySelectorAll('#nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===v?'page':'false'));
   $('#v-entry').hidden=v!=='entry';other.hidden=v==='entry';
-  if(v==='entry')renderEntry();else({list:viewList,header:viewHeader,stations:viewStations,export:viewExport,setup:viewSetup})[v]();
+  if(v==='entry')renderEntry();else({positions:viewPositions,list:viewList,header:viewHeader,stations:viewStations,export:viewExport,setup:viewSetup})[v]();
   renderTop();$('#main').scrollTop=0;
 }
 
@@ -616,6 +629,101 @@ function viewList(){
     if(r&&!r.empty){startEdit(r.id,'list');return}
     sel=r;other.querySelectorAll('#fullBody tr').forEach(x=>x.classList.toggle('sel',x===tr));const b=$('#delSel');b.hidden=false;b.textContent=`Delete empty record #${r.seq}`};
   other.querySelector('#delSel').onclick=e=>armed(e.target,'Tap again to delete',()=>{if(sel){removeRec(sel);save();viewList();toast('Deleted')}});
+}
+
+/* ---------- per-unit positions ---------- */
+let posFocus=null,impPending=null;
+function unitList(st){const set=new Set(),n=+st.h.units||0,f=+st.h.firstUnit||1;
+  for(let i=0;i<n;i++)set.add(f+i);Object.keys(st.pos||{}).forEach(k=>set.add(+k));stRecs(st.id).forEach(r=>set.add(+r.unit));
+  return [...set].filter(x=>x>0).sort((a,b)=>a-b)}
+const hasPos=p=>p&&p.lat!==''&&p.lat!=null&&p.lon!==''&&p.lon!=null;
+function fmtDM(v,isLat){if(v===''||v==null||isNaN(v))return '';const a=Math.abs(v);let d=Math.floor(a),m=+((a-d)*60).toFixed(3);if(m>=60){d++;m=0}
+  return `${d}° ${m.toFixed(3).padStart(6,'0')}′ ${isLat?(v<0?'S':'N'):(v<0?'W':'E')}`}
+/* Accepts -19.40652, 19.40652, 19 24.391, 19°24.391'S, 19 24 23.5 S.
+   No sign or letter: latitude is taken as South, longitude as East (WA). */
+function parseCoord(v,isLat){
+  const s=String(v==null?'':v).trim().toUpperCase();if(!s)return '';
+  const nums=(s.match(/\d+(?:\.\d+)?/g)||[]).map(Number);if(!nums.length||nums.length>3)return NaN;
+  if(nums.length>1&&(nums[1]>=60||(nums[2]||0)>=60))return NaN;
+  let sign;if(/[SW]/.test(s)||/^\s*-/.test(s))sign=-1;else if(/[NE]/.test(s)||/^\s*\+/.test(s))sign=1;else sign=isLat?-1:1;
+  const d=nums[0]+(nums[1]||0)/60+(nums[2]||0)/3600;
+  if(d>(isLat?90:180))return NaN;return +(sign*d).toFixed(6)}
+function setPos(st,u,lat,lon,src,t){st.pos=st.pos||{};st.pos[u]={lat,lon,src,t:t||''}}
+
+function viewPositions(){
+  const st=active();if(!st){other.innerHTML='<h2>Positions</h2><p class="note">No active station.</p>';return}
+  st.pos=st.pos||{};const L=unitLabel(),units=unitList(st),done=units.filter(u=>hasPos(st.pos[u])).length;
+  other.innerHTML=`<h2>${L} positions · Set ${esc(st.h.stationNo)} · Line ${esc(st.h.lineNo)}</h2>
+  <p class="note">Type a position as degrees and minutes like the plotter (19 24.391) or decimal degrees (-19.40652). Latitude is taken as South and longitude as East unless you add N or W. <b>Stamp GPS</b> takes the iPad's current fix, which comes from a Garmin GLO if one is paired.</p>
+  <div class="tally"><span><b>${done}</b> of ${units.length} ${L.toLowerCase()}s positioned</span><span>GPS: ${liveFix()?'±'+liveFix().acc+' m':'no fix'}</span></div>
+  <div class="panel"><div class="tblwrap"><table><thead><tr><th>${L}</th><th>Latitude</th><th>Longitude</th><th>Time</th><th>Source</th><th></th></tr></thead><tbody id="posBody">
+  ${units.map(u=>{const p=st.pos[u]||{};return `<tr data-u="${u}" class="${posFocus===u?'sel':''}"><td class="mono">${u}</td>
+   <td><input class="pin" id="plat_${u}" data-u="${u}" data-k="lat" value="${esc(fmtDM(p.lat,true))}" placeholder="deg min.mmm" autocomplete="off" autocapitalize="characters" aria-label="${L} ${u} latitude"></td>
+   <td><input class="pin" id="plon_${u}" data-u="${u}" data-k="lon" value="${esc(fmtDM(p.lon,false))}" placeholder="deg min.mmm" autocomplete="off" autocapitalize="characters" aria-label="${L} ${u} longitude"></td>
+   <td class="mono" id="pt_${u}">${p.t?hhmm(p.t):'—'}</td><td id="ps_${u}">${esc(p.src||'')}</td>
+   <td><button class="btn stampbtn" data-stamp-u="${u}">Stamp GPS</button></td></tr>`}).join('')}
+  </tbody></table></div>
+  <div class="actions"><button class="btn" id="addUnit">Add ${L.toLowerCase()}</button></div></div>
+  <div class="panel"><span class="lbl">Import from plotter (TimeZero, Garmin)</span>
+   <p class="note">Export the marks from the plotter as GPX, KML or CSV and copy the file to the iPad (AirDrop, email or a USB stick into Files), then choose it here. Only marks on this station's line (${esc(st.h.lineNo)||'?'}) are used, and you see a preview before anything changes.</p>
+   <div class="form"><div class="field"><label for="impMode">Mark names</label><select id="impMode">
+     <option value="line">L + line + 2-digit ${L.toLowerCase()} (L141 = line 1, ${L.toLowerCase()} 41)</option>
+     <option value="unit">${L} number only (41)</option></select></div>
+    <div class="field"><label for="impFile">Waypoint file</label><input type="file" id="impFile" accept=".gpx,.kml,.csv,.txt"></div></div>
+   <div id="impOut"></div></div>
+  <div class="actions"><button class="btn primary" id="posBack">Back to data entry</button></div>`;
+  if(posFocus!=null){const r=other.querySelector(`tr[data-u="${posFocus}"]`);if(r)setTimeout(()=>r.scrollIntoView({block:'center'}),0)}
+  other.querySelectorAll('.pin').forEach(inp=>inp.onchange=()=>{
+    const u=+inp.dataset.u,isLat=inp.dataset.k==='lat',v=parseCoord(inp.value,isLat);
+    if(Number.isNaN(v)){inp.classList.add('bad');toast(`Can't read that ${isLat?'latitude':'longitude'}. Try 19 24.391`);return}
+    inp.classList.remove('bad');const p=st.pos[u]||{lat:'',lon:'',t:'',src:''};p[inp.dataset.k]=v;p.src='Manual';st.pos[u]=p;
+    inp.value=fmtDM(v,isLat);$('#ps_'+u).textContent='Manual';save()});
+  other.querySelectorAll('[data-stamp-u]').forEach(b=>b.onclick=()=>{const u=+b.dataset.stampU,f=liveFix();
+    if(!f){toast('No GPS fix. Type the position from the plotter');return}
+    setPos(st,u,f.lat,f.lon,`GPS ±${f.acc} m`,new Date().toISOString());save();posFocus=u;viewPositions();toast(`${L} ${u} position stamped`)});
+  $('#addUnit').onclick=()=>{const u=(units.length?Math.max(...units):0)+1;st.pos[u]={lat:'',lon:'',t:'',src:''};posFocus=u;save();viewPositions()};
+  $('#posBack').onclick=()=>show('entry');
+  $('#impFile').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const rd=new FileReader();
+    rd.onload=()=>previewImport(st,String(rd.result),$('#impMode').value);rd.onerror=()=>toast('Could not read that file');rd.readAsText(f)};
+}
+function xmlEls(doc,name){return [...doc.getElementsByTagName('*')].filter(e=>e.localName===name)}
+function xmlText(el,name){const c=el&&xmlEls(el,name)[0];return c?c.textContent.trim():''}
+function splitCsv(line,d){const out=[];let cur='',q=false;for(let i=0;i<line.length;i++){const ch=line[i];
+  if(q){if(ch==='"'&&line[i+1]==='"'){cur+='"';i++}else if(ch==='"')q=false;else cur+=ch}
+  else if(ch==='"')q=true;else if(ch===d){out.push(cur);cur=''}else cur+=ch}out.push(cur);return out.map(x=>x.trim())}
+function parseWaypoints(txt){
+  const t=txt.replace(/^﻿/,'').trim(),out=[];
+  if(t.startsWith('<')){
+    const doc=new DOMParser().parseFromString(t,'application/xml');
+    ['wpt','rtept'].forEach(n=>xmlEls(doc,n).forEach(w=>out.push({name:xmlText(w,'name'),lat:+w.getAttribute('lat'),lon:+w.getAttribute('lon'),t:xmlText(w,'time')})));
+    xmlEls(doc,'Placemark').forEach(p=>{const c=xmlText(p,'coordinates').split(/\s+/)[0].split(',').map(Number);out.push({name:xmlText(p,'name'),lat:c[1],lon:c[0],t:''})});
+  }else{
+    const lines=t.split(/\r?\n/).filter(l=>l.trim());if(lines.length<2)return out;
+    const d=[',',';','\t'].sort((a,b)=>lines[0].split(b).length-lines[0].split(a).length)[0];
+    const head=splitCsv(lines[0],d).map(h=>h.toLowerCase());
+    const fi=re=>head.findIndex(h=>re.test(h));
+    const iN=fi(/name|ident|label|mark|^id$/),iLa=fi(/lat/),iLo=fi(/lon|lng/),iT=fi(/date|time/);
+    if(iN<0||iLa<0||iLo<0)return out;
+    lines.slice(1).forEach(l=>{const c=splitCsv(l,d);out.push({name:c[iN]||'',lat:parseCoord(c[iLa],true),lon:parseCoord(c[iLo],false),t:iT>=0?c[iT]:''})});
+  }
+  return out.filter(w=>w.name&&isFinite(w.lat)&&isFinite(w.lon)&&w.lat!==''&&w.lon!=='');
+}
+function previewImport(st,txt,mode){
+  const wps=parseWaypoints(txt),line=String(st.h.lineNo||''),L=unitLabel(),box=$('#impOut');
+  if(!wps.length){box.innerHTML='<p class="warn">No waypoints found. Check the file is a GPX, KML or CSV export with name, latitude and longitude.</p>';return}
+  const matched=[],skipped=[];
+  wps.forEach(w=>{const n=w.name.trim().toUpperCase();let u=null;
+    if(mode==='line'){const m=n.match(/^L?\s*(\d+)(\d{2})$/);if(m&&m[1]===line)u=+m[2]}
+    else{const m=n.match(/^\D*(\d+)$/);if(m)u=+m[1]}
+    if(u)matched.push(Object.assign({u},w));else skipped.push(w.name)});
+  const byU={};matched.forEach(m=>byU[m.u]=m);const list=Object.values(byU).sort((a,b)=>a.u-b.u);
+  impPending=list;
+  const over=list.filter(m=>hasPos((st.pos||{})[m.u])).length;
+  box.innerHTML=`<p class="note"><b>${wps.length}</b> waypoints in file. <b>${list.length}</b> match line ${esc(line)||'?'}${skipped.length?`; ${skipped.length} on other lines or unrecognised`:''}.${over?` ${over} existing position(s) will be replaced.`:''}</p>
+   ${list.length?`<div class="tblwrap imprev"><table><thead><tr><th>Mark</th><th>${L}</th><th>Latitude</th><th>Longitude</th></tr></thead><tbody>${list.map(m=>`<tr><td class="mono">${esc(m.name)}</td><td class="mono">${m.u}</td><td class="mono">${fmtDM(m.lat,true)}</td><td class="mono">${fmtDM(m.lon,false)}</td></tr>`).join('')}</tbody></table></div>
+   <div class="actions"><button class="btn primary" id="impApply">Apply ${list.length} positions</button></div>`:`<p class="warn">Nothing matched. Check the station's line number, or switch "Mark names".</p>`}`;
+  const a=$('#impApply');if(a)a.onclick=()=>{impPending.forEach(m=>{const tt=m.t&&!isNaN(new Date(m.t))?new Date(m.t).toISOString():'';setPos(st,m.u,+(+m.lat).toFixed(6),+(+m.lon).toFixed(6),'Plotter file',tt)});
+    const n=impPending.length;impPending=null;save();viewPositions();toast(`${n} positions imported`)};
 }
 
 function fieldHTML(f,h){
@@ -676,9 +784,9 @@ function viewStations(){
     <button class="btn" id="doneSt"${st?'':' disabled'}>${st&&st.done?'Reopen station':'Mark complete'}</button>
     <button class="btn danger" id="delSt"${st&&!stRecs(st.id).length?'':' hidden'}>Delete empty station</button>
   </div>
-  <div class="panel"><div class="tblwrap"><table><thead><tr><th></th><th>Status</th><th>Date</th><th>Day</th><th>Stn</th><th>Method</th><th>OPNUM</th><th>Location</th><th>Depth m</th><th>Fish</th><th>Ret.</th><th>Soak</th><th></th></tr></thead>
+  <div class="panel"><div class="tblwrap"><table><thead><tr><th></th><th>Status</th><th>Date</th><th>Day</th><th>Stn</th><th>Method</th><th>OPNUM</th><th>Location</th><th>Depth m</th><th>Pos.</th><th>Fish</th><th>Ret.</th><th>Soak</th><th></th></tr></thead>
   <tbody>${sorted.map(s=>{const rs=stRecs(s.id),f=rs.filter(r=>!r.empty),[lab,cls]=status(s);
-    return `<tr data-st="${s.id}" class="${s.id===S.active?'sel':''}"><td>${s.id===S.active?'●':''}</td><td><span class="stat ${cls}">${lab}</span></td><td class="mono">${esc(s.h.date)}</td><td class="mono">${esc(s.h.dayNo)}</td><td class="mono">${esc(s.h.stationNo)}</td><td>${esc(s.h.method)}</td><td class="mono">${esc(s.h.opnum)}</td><td>${esc(s.h.location)}</td><td class="mono">${esc(s.h.depth!=null?s.h.depth:s.h.depthMin)}</td><td class="mono">${f.length}</td><td class="mono">${f.filter(r=>isRet(r)).length}</td><td class="mono">${soak(s.h)}</td>
+    return `<tr data-st="${s.id}" class="${s.id===S.active?'sel':''}"><td>${s.id===S.active?'●':''}</td><td><span class="stat ${cls}">${lab}</span></td><td class="mono">${esc(s.h.date)}</td><td class="mono">${esc(s.h.dayNo)}</td><td class="mono">${esc(s.h.stationNo)}</td><td>${esc(s.h.method)}</td><td class="mono">${esc(s.h.opnum)}</td><td>${esc(s.h.location)}</td><td class="mono">${esc(s.h.depth!=null?s.h.depth:s.h.depthMin)}</td><td class="mono">${(()=>{const us=unitList(s);return us.filter(u=>hasPos((s.pos||{})[u])).length+'/'+us.length})()}</td><td class="mono">${f.length}</td><td class="mono">${f.filter(r=>isRet(r)).length}</td><td class="mono">${soak(s.h)}</td>
     <td><button class="btn go" data-go="${s.id}">Enter data</button></td></tr>`}).join('')||'<tr class="empty"><td colspan="13">No stations yet. Tap Add station(s).</td></tr>'}</tbody></table></div></div>`;
   other.querySelectorAll('tr[data-st]').forEach(tr=>tr.onclick=e=>{if(e.target.closest('[data-go]'))return;activate(tr.dataset.st);viewStations();renderTop()});
   other.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{activate(b.dataset.go);show('entry')});
@@ -686,24 +794,27 @@ function viewStations(){
     h.stationNo=Math.max(0,...S.stations.filter(s=>s.h.date===h.date&&String(s.h.dayNo)===String(h.dayNo)).map(s=>+s.h.stationNo||0))+1;
     STAMPS.forEach(s=>{h[s+'_time']='';h[s+'_lat']='';h[s+'_lon']=''});h.comment='';h.opnum='';h.moon='';viewHeader(h)};
   $('#editSt').onclick=()=>show('header');
-  $('#doneSt').onclick=()=>{st.done=!st.done;save();viewStations();if(st.done){saveCsv('flat','active','backup')}else toast('Station reopened')};
+  $('#doneSt').onclick=()=>{st.done=!st.done;save();viewStations();if(st.done&&window.top===window.self){saveCsv('flat','active','backup')}else toast(st.done?'Station marked complete':'Station reopened')};
   const d=$('#delSt');if(d)d.onclick=e=>armed(e.target,'Tap again to delete',()=>{S.stations=S.stations.filter(x=>x.id!==st.id);S.active=S.stations.length?S.stations[0].id:null;save();viewStations();renderTop();toast('Station deleted')});
 }
 
 /* export */
 const q=v=>{v=v==null?'':String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
 const HKEYS=[...HFK.map(f=>f.k),'set_time','set_lat','set_lon','haul_time','haul_lat','haul_lon'];
-const RKEYS=['id','station','device','seq','ts','unit','hook','empty','species','sci','caab','fl_mm','sex','fate','dr','rc','teps','dep','oto','gon','fin','sto','lat','lon','comment','edited'];
-const RNAMES={id:'record_id',station:'station_id',seq:'record_no',ts:'timestamp',empty:'empty_unit',sci:'scientific_name',caab:'caab_code',dr:'discard_reason',rc:'release_condition',teps:'teps_interaction',dep:'depredation',oto:'otolith_id',gon:'gonad_id',fin:'finclip_id',sto:'stomach_id',comment:'comment_or_interaction'};
+const RKEYS=['id','station','device','seq','ts','unit','hook','empty','species','sci','caab','fl_mm','sex','fate','dr','rc','teps','dep','oto','gon','fin','sto','ulat','ulon','lat','lon','comment','edited'];
+const RNAMES={id:'record_id',station:'station_id',seq:'record_no',ts:'timestamp',empty:'empty_unit',sci:'scientific_name',caab:'caab_code',dr:'discard_reason',rc:'release_condition',teps:'teps_interaction',dep:'depredation',oto:'otolith_id',gon:'gonad_id',fin:'finclip_id',sto:'stomach_id',comment:'comment_or_interaction',ulat:'unit_lat',ulon:'unit_lon',lat:'fish_gps_lat',lon:'fish_gps_lon'};
 function csv(kind,scope){
   const sts=scope==='all'?S.stations:S.stations.filter(s=>s.id===S.active),ids=new Set(sts.map(s=>s.id));
   const recs=S.records.filter(r=>ids.has(r.station));
   const hrow=st=>[st.id,S.device,...HKEYS.map(k=>st.h[k]),soak(st.h)];
   const hcols=['station_id','device',...HKEYS,'soak_min'];
-  const rrow=r=>RKEYS.map(k=>k==='empty'||k==='teps'?(r[k]?'Y':'N'):r[k]);
+  const rrow=r=>{const st=S.stations.find(x=>x.id===r.station),p=st&&st.pos&&st.pos[r.unit];
+  return RKEYS.map(k=>k==='empty'||k==='teps'?(r[k]?'Y':'N'):k==='ulat'?(hasPos(p)?p.lat:''):k==='ulon'?(hasPos(p)?p.lon:''):r[k])};
   const rcols=RKEYS.map(k=>RNAMES[k]||k);
   let rows;
   if(kind==='stations')rows=[hcols,...sts.map(hrow)];
+  else if(kind==='positions'){rows=[['station_id','device','opnum','date','line','set','method','unit','lat','lon','lat_dm','lon_dm','time','source']];
+    sts.forEach(st=>unitList(st).forEach(u=>{const p=(st.pos||{})[u]||{};rows.push([st.id,S.device,st.h.opnum,st.h.date,st.h.lineNo,st.h.stationNo,st.h.method,u,hasPos(p)?p.lat:'',hasPos(p)?p.lon:'',fmtDM(p.lat,true),fmtDM(p.lon,false),p.t||'',p.src||''])}))}
   else if(kind==='fish')rows=[rcols,...recs.map(rrow)];
   else{const m=Object.fromEntries(sts.map(s=>[s.id,s]));rows=[[...hcols,rcols[0],...rcols.slice(3)],...recs.map(r=>{const rr=rrow(r);return [...hrow(m[r.station]),rr[0],...rr.slice(3)]})]}
   return rows.map(r=>r.map(q).join(',')).join('\n');
@@ -713,7 +824,7 @@ function viewExport(){
   const top=window.top===window.self;
   const txt=csv(exKind,exScope);
   other.innerHTML=`<h2>Export</h2>
-  <div class="tabs">${[['flat','Flat (one row per fish)'],['fish','Fish table'],['stations','Station table']].map(([k,l])=>`<button class="btn" data-ex="${k}" aria-pressed="${exKind===k}">${l}</button>`).join('')}</div>
+  <div class="tabs">${[['flat','Flat (one row per fish)'],['fish','Fish table'],['stations','Station table'],['positions','Trap positions']].map(([k,l])=>`<button class="btn" data-ex="${k}" aria-pressed="${exKind===k}">${l}</button>`).join('')}</div>
   <div class="tabs">${[['active','Active station'],['all','All stations']].map(([k,l])=>`<button class="btn" data-sc="${k}" aria-pressed="${exScope===k}">${l}</button>`).join('')}</div>
   <p class="note">Flat repeats the station header on every fish, like the lobster export. Fish and Station tables link on <b>station_id</b> for joining in R. Every record carries a unique record_id and the device ID, so files from several iPads combine without duplicates.</p>
   <textarea class="csv" id="csvOut" readonly aria-label="CSV output">${esc(txt)}</textarea>
@@ -724,11 +835,6 @@ function viewExport(){
   $('#copyCsv').onclick=()=>{const ta=$('#csvOut');const p=navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(ta.value):Promise.reject();
     p.then(()=>toast('CSV copied')).catch(()=>{ta.focus();ta.select();toast('Selected. Use the system Copy')})};
   if(top)$('#dlCsv').onclick=()=>saveCsv(exKind,exScope);
-  if(false)(async()=>{
-    const st=active(),name='',blob=null;
-    try{const file=new File([blob],name,{type:'text/csv'});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return}}catch(e){}
-    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
-  })();
 }
 async function saveCsv(kind,scope,tag){
   const st=active(),txt=csv(kind,scope);
