@@ -1,6 +1,6 @@
 // Catch Logger offline worker. Bump VERSION whenever you change any app file,
 // so iPads download the new copy next time they open the app with internet.
-const VERSION = 'catch-logger-v10';
+const VERSION = 'catch-logger-v11';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

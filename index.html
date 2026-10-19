@@ -138,7 +138,13 @@ main{overflow:auto;padding-inline:16px;padding-block:0 16px;min-height:0}
 #tepsBtn[aria-pressed="true"]{background:var(--danger);border-color:var(--danger);color:var(--raised)}
 .tag.teps{border-color:var(--danger);color:var(--danger)}
 .tag.dis{border-color:var(--muted);color:var(--muted)}
-.col-attr .seg .btn{min-height:46px}
+.col-attr .seg .btn{min-height:58px}
+.col-attr #sampSeg .samp{min-height:58px}
+.col-attr .tepsrow .btn,.col-attr .tepsrow .cmt{min-height:52px}
+.seg.c5{grid-template-columns:repeat(5,minmax(0,1fr))}
+.seg.c5 .btn{font-size:14px;padding:4px 2px}
+.col-attr .group{gap:6px}
+.col-attr{gap:12px}
 .cmt{min-height:44px;border:1px solid var(--line);border-radius:8px;background:var(--raised);padding:0 12px;width:100%}
 .warn{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);border-radius:8px;padding:8px 10px;font-weight:600;font-size:14px}
 .enter{min-height:76px;font-size:24px;font-family:var(--f-display);letter-spacing:.06em;text-transform:uppercase;background:var(--go);border-color:var(--go);color:var(--on-go)}
@@ -304,11 +310,12 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
             <button class="btn" data-v="RET">Retained</button><button class="btn" data-v="BT">Retained for bait (BT)</button><button class="btn" data-v="DIS">Discarded</button>
           </div></div>
         <div class="group"><span class="lbl">Discard reason</span>
-          <div class="seg c4" data-f="dr">
+          <div class="seg c5" data-f="dr">
             <button class="btn code" data-v="NS">NS<small>Not legal size</small></button>
             <button class="btn code" data-v="NE">NE<small>Low value</small></button>
             <button class="btn code" data-v="PQ">PQ<small>Poor quality</small></button>
             <button class="btn code" data-v="DD">DD<small>Dead</small></button>
+            <button class="btn code" data-v="RG">RG<small>Regurg.</small></button>
           </div></div>
         <div class="group"><span class="lbl">Release condition</span>
           <div class="seg c4" data-f="rc">
@@ -316,10 +323,6 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
             <button class="btn code" data-v="AI">AI<small>Alive injured</small></button>
             <button class="btn code" data-v="DD">DD<small>Dead</small></button>
             <button class="btn code" data-v="UN">UN<small>Unknown</small></button>
-          </div></div>
-        <div class="group"><span class="lbl">Depredation</span>
-          <div class="seg c3" data-f="dep">
-            <button class="btn" data-v="N">None</button><button class="btn" data-v="P">Partial</button><button class="btn" data-v="W">Whole</button>
           </div></div>
         <div class="group"><span class="lbl">Samples (auto serial)</span>
           <div class="seg c4" id="sampSeg"></div></div>
@@ -339,7 +342,7 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
 
       <div class="panel recent">
         <div class="phead"><span class="lbl">Running list · tap a row to edit</span><span class="muted small" id="recentCount"></span></div>
-        <div class="tblwrap"><table><thead><tr><th>#</th><th id="recUnitTh">Unit</th><th>Species</th><th>FL mm</th><th>Sex</th><th>Fate</th><th>Depred.</th><th>Samples</th><th>Time</th></tr></thead><tbody id="recentBody"></tbody></table></div>
+        <div class="tblwrap"><table><thead><tr><th>#</th><th id="recUnitTh">Unit</th><th>Species</th><th>FL mm</th><th>Sex</th><th>Fate</th><th>Samples</th><th>Time</th></tr></thead><tbody id="recentBody"></tbody></table></div>
       </div>
     </section>
     <section class="page" id="v-other" hidden></section>
@@ -350,7 +353,7 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
 
 <script>
 (function(){
-const APP_VERSION='v10';
+const APP_VERSION='v11';
 const LS_KEY='demersalCatchLogger.v2';
 const $=s=>document.querySelector(s);
 const esc=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -361,7 +364,7 @@ const hhmm=iso=>{const d=new Date(iso);return z(d.getHours())+':'+z(d.getMinutes
 
 /* Species presets. CAAB codes are left blank on purpose: fill them from the CAAB list before use.
    max = sanity-check ceiling for fork length (mm); placeholder values, adjust per species. */
-const MIN_FL=30; /* mm: shortest length accepted without a confirm tap */
+const MIN_FL=200; /* mm: fish under this fall through the trap mesh, so a shorter length needs a confirm tap */
 const sp=(c,s,max,x)=>Object.assign({c,s,max,caab:''},x||{});
 const PRESETS={
   west:{name:'West Coast',list:[
@@ -762,10 +765,10 @@ function sampList(r){return SAMPLES.filter(([k])=>r[k]).map(([k])=>r[k]).join(' 
 function rowHTML(r,showHook,full){
   const nph=(r.photos||[]).length;
   const act=full?`<td><div class="delcell" data-cell="${r.id}">${nph?`<button class="btn mini" data-ph="${r.id}">📷 ${nph}</button>`:''}<button class="btn mini danger" data-del="${r.id}">Delete</button></div></td>`:'';
-  if(r.empty)return `<tr class="empty${S.cur.editId===r.id?' sel':''}" data-id="${r.id}"><td class="mono">${r.seq}</td><td class="mono">${r.unit}</td><td colspan="6">Empty ${esc(unitLabel().toLowerCase())}</td><td class="mono">${hhmm(r.ts)}</td>${act}</tr>`;
+  if(r.empty)return `<tr class="empty${S.cur.editId===r.id?' sel':''}" data-id="${r.id}"><td class="mono">${r.seq}</td><td class="mono">${r.unit}</td><td colspan="5">Empty ${esc(unitLabel().toLowerCase())}</td><td class="mono">${hhmm(r.ts)}</td>${act}</tr>`;
   const u=showHook&&r.hook?`${r.unit}·h${r.hook}`:r.unit;
   return `<tr data-id="${r.id}" class="${S.cur.editId===r.id?'sel':''}"><td class="mono">${r.seq}</td><td class="mono">${u}</td><td>${esc(r.species)}</td><td class="mono">${r.fl_mm===''?'—':r.fl_mm}</td><td>${r.sex}</td>`+
-    `<td>${fateHTML(r)}</td><td>${r.dep==='N'?'—':`<span class="tag dep">${r.dep==='P'?'Partial':'Whole'}</span>`}</td><td class="mono">${esc(sampList(r))||'—'}${nph&&!full?` 📷${nph}`:''}</td><td class="mono">${hhmm(r.ts)}</td>${act}</tr>`;
+    `<td>${fateHTML(r)}</td><td class="mono">${esc(sampList(r))||'—'}${nph&&!full?` 📷${nph}`:''}</td><td class="mono">${hhmm(r.ts)}</td>${act}</tr>`;
 }
 function renderRecent(){
   const st=active(),lf=$('#lastFish');
@@ -775,7 +778,7 @@ function renderRecent(){
   else lf.hidden=true;
   if(!st){$('#recentBody').innerHTML='';return}
   const rs=stRecs(st.id),dl=st.h.method==='Dropline';
-  $('#recentBody').innerHTML=rs.slice(-10).reverse().map(r=>rowHTML(r,dl)).join('')||`<tr class="empty"><td colspan="9">No records yet. Pick a species, key the length, tap Enter.</td></tr>`;
+  $('#recentBody').innerHTML=rs.slice(-10).reverse().map(r=>rowHTML(r,dl)).join('')||`<tr class="empty"><td colspan="8">No records yet. Pick a species, key the length, tap Enter.</td></tr>`;
   $('#recentCount').textContent=`${rs.length} records in this station`;
 }
 function renderEntry(){renderSpecies();renderUnit();renderLen();renderAttrs();renderRecent();renderTop()}
@@ -784,10 +787,10 @@ function renderEntry(){renderSpecies();renderUnit();renderLen();renderAttrs();re
 $('#keypad').innerHTML=['1','2','3','4','5','6','7','8','9','CLR','0','DEL'].map(k=>`<button class="btn${k.length>1?' fn':''}" data-k="${k}">${k==='CLR'?'Clear':k==='DEL'?'⌫ Back':k}</button>`).join('');
 function key(k){const c=S.cur;
   if(k==='CLR')c.len='';else if(k==='DEL')c.len=c.len.slice(0,-1);else if(c.len.length<4)c.len=(c.len+k).replace(/^0+/,'');
-  c.ack=false;c.warn='';renderLen();renderAttrs()}
+  c.ack=false;c.ackLen=false;c.warn='';renderLen();renderAttrs()}
 
 /* ---------- commit ---------- */
-function resetFish(){const c=S.cur;Object.assign(c,{len:'',sex:'U',fate:fateFor(c.sp),dr:'',rc:'',teps:!!(c.sp&&c.sp.teps),dep:'N',samp:{},cmt:'',photos:[],ackPhoto:false,editId:null,ack:false,warn:''})}
+function resetFish(){const c=S.cur;Object.assign(c,{len:'',sex:'U',fate:fateFor(c.sp),dr:'',rc:'',teps:!!(c.sp&&c.sp.teps),dep:'',samp:{},cmt:'',photos:[],ackPhoto:false,ackLen:false,editId:null,ack:false,warn:''})}
 function pickSpecies(s){const c=S.cur;c.sp=s;c.ack=false;c.ackPhoto=false;if(!c.editId){c.warn='';c.fate=fateFor(s);c.teps=!!s.teps;if(c.fate!=='DIS'){c.dr='';c.rc=''}}}
 function warn(m,confirmable){S.cur.warn=m;S.cur.ack=!!confirmable;renderAttrs()}
 function commit(){
@@ -795,8 +798,8 @@ function commit(){
   if(!st){toast('Create a station first');return}
   if(!c.sp){warn('Pick a species first.');return}
   const len=c.len===''?'':parseInt(c.len,10);
-  if(len===''&&c.dep==='N'&&!c.teps){warn('Key in a fork length. Length can be blank only for a depredated fish or a TEPS interaction.');return}
-  if(c.fate==='DIS'&&!c.teps&&!c.dr){warn('Discarded fish need a discard reason (NS, NE, PQ or DD).');return}
+  if(len===''&&!c.teps&&!c.ackLen){c.ackLen=true;c.ack=true;c.warn='No length keyed. Key it in, or tap Enter again to save without a length.';renderAttrs();return}
+  if(c.fate==='DIS'&&!c.teps&&!c.dr){warn('Discarded fish need a discard reason (NS, NE, PQ, DD or RG).');return}
   if((c.fate==='DIS'||c.teps)&&!c.rc){warn('Pick a release condition (AU, AI, DD or UN).');return}
   if(c.teps&&!c.cmt.trim()){warn('Describe the TEPS interaction in the comment box.');$('#cmt').focus();return}
   const dr=c.fate==='DIS'&&!c.teps?c.dr:'',rc=(c.fate==='DIS'||c.teps)?c.rc:'';
@@ -863,7 +866,7 @@ document.addEventListener('click',e=>{
     c[f]=(f==='dr'||f==='rc')&&c[f]===v?'':v;
     if(f==='fate'&&v!=='DIS'){c.dr='';if(!c.teps)c.rc=''}
     if(f==='fate'&&v==='DIS')SAMPLES.forEach(([k])=>{if(k!=='fin')c.samp[k]=false});
-    if(f==='dr'&&v==='DD'&&c.dr==='DD')c.rc='DD';
+    if(f==='dr'&&(v==='DD'||v==='RG')&&c.dr===v)c.rc='DD'; /* dead and regurgitated fish are always released dead */
     if(c.warn&&!c.ack&&!c.editId)c.warn='';renderAttrs();return}
   if(t.matches('#sampSeg .samp')){const c=S.cur,k=t.dataset.k;c.samp[k]=!c.samp[k];
     if(c.samp[k]&&k!=='fin'&&c.fate==='DIS'){c.fate='RET';c.dr='';if(!c.teps)c.rc=''}renderAttrs();return}
@@ -910,8 +913,8 @@ function viewList(){
   other.innerHTML=`<h2>Full list · Station ${esc(st.h.stationNo)}</h2>
   <div class="tally">${Object.entries(tally).sort((a,b)=>b[1][0]-a[1][0]).map(([k,v])=>`<span>${esc(k)} <b>${v[0]}</b> <span class="muted small">(${v[1]} ret)</span></span>`).join('')||'<span>No fish yet</span>'}</div>
   <p class="note">Tap a fish to edit it on the entry screen. <b>Delete</b> asks you to confirm before anything is removed.</p>
-  <div class="panel"><div class="tblwrap"><table><thead><tr><th>#</th><th>${unitLabel()}</th><th>Species</th><th>FL mm</th><th>Sex</th><th>Fate</th><th>Depred.</th><th>Samples</th><th>Time</th><th></th></tr></thead>
-  <tbody id="fullBody">${rs.slice().reverse().map(r=>rowHTML(r,st.h.method==='Dropline',true)).join('')||'<tr class="empty"><td colspan="10">No records yet.</td></tr>'}</tbody></table></div></div>`;
+  <div class="panel"><div class="tblwrap"><table><thead><tr><th>#</th><th>${unitLabel()}</th><th>Species</th><th>FL mm</th><th>Sex</th><th>Fate</th><th>Samples</th><th>Time</th><th></th></tr></thead>
+  <tbody id="fullBody">${rs.slice().reverse().map(r=>rowHTML(r,st.h.method==='Dropline',true)).join('')||'<tr class="empty"><td colspan="9">No records yet.</td></tr>'}</tbody></table></div></div>`;
   const body=other.querySelector('#fullBody');let timer=null,askAt=0;
   const restore=()=>{clearTimeout(timer);body.querySelectorAll('tr.confirmrow').forEach(x=>x.remove());
     body.querySelectorAll('[data-no]').forEach(b=>{b.outerHTML=`<button class="btn mini danger" data-del="${b.dataset.no}">Delete</button>`})};
@@ -922,7 +925,7 @@ function viewList(){
       /* the Delete button becomes Cancel in the same spot, so a double-tap cancels */
       del.outerHTML=`<button class="btn mini" data-no="${r.id}">Cancel</button>`;askAt=Date.now();
       const tr=body.querySelector(`tr[data-id="${r.id}"]`),cr=document.createElement('tr');cr.className='confirmrow';
-      cr.innerHTML=`<td colspan="10"><div class="confirmbar"><span class="delq">Delete record #${r.seq}${r.empty?' (empty '+esc(unitLabel().toLowerCase())+')':' '+esc(r.species)+(r.fl_mm!==''?' '+r.fl_mm+' mm':'')}${(r.photos||[]).length?' and its photos':''}? This cannot be undone.</span><button class="btn mini danger solid" data-yes="${r.id}">Yes, delete</button></div></td>`;
+      cr.innerHTML=`<td colspan="9"><div class="confirmbar"><span class="delq">Delete record #${r.seq}${r.empty?' (empty '+esc(unitLabel().toLowerCase())+')':' '+esc(r.species)+(r.fl_mm!==''?' '+r.fl_mm+' mm':'')}${(r.photos||[]).length?' and its photos':''}? This cannot be undone.</span><button class="btn mini danger solid" data-yes="${r.id}">Yes, delete</button></div></td>`;
       tr.after(cr);timer=setTimeout(restore,10000);return}
     const yes=e.target.closest('[data-yes]');
     if(yes){if(Date.now()-askAt<700)return;clearTimeout(timer);const r=S.records.find(x=>x.id===yes.dataset.yes);if(r){removeRec(r);save();toast(`Deleted #${r.seq}${r.empty?'':' '+r.species}`);viewList()}return}
