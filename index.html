@@ -353,7 +353,7 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
 
 <script>
 (function(){
-const APP_VERSION='v11';
+const APP_VERSION='v12';
 const LS_KEY='demersalCatchLogger.v2';
 const $=s=>document.querySelector(s);
 const esc=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -1181,7 +1181,7 @@ function viewSetup(){
    <div class="form">${SAMPLES.map(([k,l])=>`<div class="field"><label for="s_${k}p">${l} prefix</label><input id="s_${k}p" value="${esc(S.serials[k].prefix)}"></div><div class="field"><label for="s_${k}n">${l} next no</label><input id="s_${k}n" type="number" inputmode="numeric" value="${S.serials[k].next}"></div>`).join('')}</div>
   </div>
   <div class="actions"><button class="btn primary" id="sSave">Save setup</button></div>
-  <p class="note">Catch Logger app version <b>${APP_VERSION}</b></p>
+  <div class="actions" style="align-items:center"><span class="note">Catch Logger app version <b>${APP_VERSION}</b></span><button class="btn" id="chkUpd">Check for updates</button></div>
   <div class="panel"><span class="lbl">Data on this iPad</span>
    <p class="note">${S.records.length} records in ${S.stations.length} station(s). Export before clearing anything.</p>
    <p class="note" id="storeInfo">Checking storage…</p>
@@ -1191,6 +1191,9 @@ function viewSetup(){
    <input type="file" id="rsFile" accept=".json,application/json" aria-label="Backup file">
    <div id="rsOut"></div></div>`;
   storeInfo();
+  $('#chkUpd').onclick=async()=>{if(!window.checkForUpdate){toast('Updates apply to the installed app, not this preview');return}
+    toast('Checking…');const r=await window.checkForUpdate();
+    toast({latest:`You have the latest version (${APP_VERSION})`,downloading:'New version downloading. A restart button will appear',ready:'Update ready. Tap the green button to restart',offline:'No internet. Try again when back in range',none:'Open the app from the home-screen icon to get updates'}[r]||'Checked')};
   $('#bkNow3').onclick=()=>fullBackup(false);
   $('#rsFile').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>previewRestore(String(rd.result));rd.onerror=()=>toast('Could not read that file');rd.readAsText(f)};
   $('#sSave').onclick=()=>{S.device=$('#s_dev').value.trim()||S.device;S.preset=$('#s_pre').value;S.defFate=$('#s_fate').value;
@@ -1248,9 +1251,22 @@ document.addEventListener('pointerdown',function wl(){try{navigator.wakeLock&&na
 })();
 </script>
 <script>
-if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').then(r=>{
-  r.addEventListener('updatefound',()=>{const w=r.installing;w&&w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller){const t=document.getElementById('toast');if(t){t.textContent='Update downloaded. Close and reopen the app to use it.';t.classList.add('on');setTimeout(()=>t.classList.remove('on'),6000)}}})});
-}).catch(()=>{})})}
+/* Updates: a new version is fetched fresh from the website (never from the iPad's web cache),
+   then a "Restart to update" button appears. Tapping it reloads into the new version. */
+(function(){if(!('serviceWorker' in navigator))return;
+  function offer(){if(document.getElementById('updBar'))return;const b=document.createElement('button');b.id='updBar';
+    b.textContent='Update downloaded · tap to restart';b.style.cssText='position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:30;min-height:52px;padding:0 22px;border-radius:999px;border:0;font:600 16px system-ui,-apple-system,sans-serif;background:#3ab36a;color:#04200e;box-shadow:0 4px 18px rgba(0,0,0,.35)';
+    b.onclick=()=>{navigator.serviceWorker.getRegistration().then(r=>{if(r&&r.waiting){r.waiting.postMessage('skipWaiting');setTimeout(()=>location.reload(),400)}else location.reload()})};document.body.appendChild(b)}
+  /* never reload by itself (it could interrupt a fish being keyed); offer a restart instead */
+  navigator.serviceWorker.addEventListener('controllerchange',offer);
+  window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{
+    if(r.waiting&&navigator.serviceWorker.controller)offer();
+    r.addEventListener('updatefound',()=>{const w=r.installing;w&&w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)offer()})});
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')r.update().catch(()=>{})});
+  }).catch(()=>{})});
+  window.checkForUpdate=function(){return navigator.serviceWorker.getRegistration().then(r=>{if(!r)return 'none';if(r.waiting){offer();return 'ready'}
+    return r.update().then(()=>new Promise(res=>setTimeout(()=>res(r.installing||r.waiting?'downloading':'latest'),1500)))}).catch(()=>'offline')};
+})();
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 </script>
 </body>
