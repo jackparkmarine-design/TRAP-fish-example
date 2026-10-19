@@ -133,7 +133,7 @@ main{overflow:auto;padding-inline:16px;padding-block:0 16px;min-height:0}
 .pin.bad{border-color:var(--danger);background:var(--danger-soft)}
 .stampbtn{min-height:42px;padding:0 12px;font-size:14px}
 .imprev{max-height:240px;overflow:auto}
-.tepsrow{display:grid;grid-template-columns:auto 1fr;gap:6px}
+.tepsrow{display:grid;grid-template-columns:auto 1fr auto;gap:6px}
 .tepsrow .btn{min-height:44px;padding:0 12px;font-size:14px}
 #tepsBtn[aria-pressed="true"]{background:var(--danger);border-color:var(--danger);color:var(--raised)}
 .tag.teps{border-color:var(--danger);color:var(--danger)}
@@ -183,6 +183,18 @@ main{overflow:auto;padding-inline:16px;padding-block:0 16px;min-height:0}
 .savefail{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-block:10px 0;padding:10px 14px;border-radius:10px;background:var(--danger);color:var(--on-fam);font-size:14.5px}
 .savefail .btn{min-height:44px;background:var(--raised);color:var(--ink);border-color:var(--raised);white-space:nowrap}
 .restore{display:flex;flex-direction:column;gap:8px}
+.modal{position:fixed;inset:0;z-index:20;background:rgba(5,12,16,.6);display:flex;align-items:center;justify-content:center;padding:16px}
+.mbox{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:16px;max-width:520px;width:100%;max-height:90%;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.mbox.wide{max-width:900px}.mbox h3{margin:0;font-family:var(--f-display);font-size:22px}
+.phgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.phgrid figure{margin:0;display:flex;flex-direction:column;gap:6px}.phgrid img{width:100%;border-radius:8px;border:1px solid var(--line)}
+#photoBtn{background:var(--tg-s);border-color:var(--tg);color:var(--ink)}
+.mini{min-height:40px;padding:0 12px;font-size:14px}
+.delcell{display:flex;gap:6px;align-items:center;justify-content:flex-end;white-space:nowrap}
+.delq{font-weight:600;color:var(--danger);font-size:14px;white-space:normal}
+.confirmrow td{background:var(--danger-soft)}
+.confirmbar{display:flex;gap:12px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.btn.danger.solid{background:var(--danger);color:var(--on-fam)}
 /* tables */
 .tblwrap{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:14px}
@@ -314,6 +326,7 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
         <div class="tepsrow">
           <button class="btn" id="tepsBtn" aria-pressed="false">TEPS interaction</button>
           <input class="cmt" id="cmt" placeholder="Fish comment (optional)" aria-label="Fish comment">
+          <button class="btn" id="photoBtn" hidden>📷 Photo</button><input type="file" id="photoIn" accept="image/*" capture="environment" hidden>
         </div>
         <div class="warn" id="warnBox" hidden></div>
         <div class="lastfish" id="lastFish" hidden></div>
@@ -332,11 +345,12 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
     <section class="page" id="v-other" hidden></section>
   </main>
 </div>
+<div class="modal" id="modal" hidden></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 (function(){
-const APP_VERSION='v8';
+const APP_VERSION='v10';
 const LS_KEY='demersalCatchLogger.v2';
 const $=s=>document.querySelector(s);
 const esc=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -563,8 +577,8 @@ function fresh(){
    2. localStorage (second copy): the whole state, for as long as it fits (~14,000 fish).
    A save only counts as failed if BOTH copies fail. Entry is never blocked. */
 const DB_NAME='catchLogger';let db=null,dbOk=null,lsOk=true,writing=Promise.resolve(),pend=false;const savedJson=new Map();
-function openDB(){return new Promise(res=>{try{const rq=indexedDB.open(DB_NAME,1);
-  rq.onupgradeneeded=()=>{const d=rq.result;if(!d.objectStoreNames.contains('meta'))d.createObjectStore('meta');if(!d.objectStoreNames.contains('records'))d.createObjectStore('records',{keyPath:'id'})};
+function openDB(){return new Promise(res=>{try{const rq=indexedDB.open(DB_NAME,2);
+  rq.onupgradeneeded=()=>{const d=rq.result;if(!d.objectStoreNames.contains('meta'))d.createObjectStore('meta');if(!d.objectStoreNames.contains('records'))d.createObjectStore('records',{keyPath:'id'});if(!d.objectStoreNames.contains('photos'))d.createObjectStore('photos',{keyPath:'id'})};
   rq.onsuccess=()=>res(rq.result);rq.onerror=()=>res(null);rq.onblocked=()=>res(null)}catch(e){res(null)}})}
 function idbLoad(){return new Promise(res=>{try{const tx=db.transaction(['meta','records'],'readonly');let meta=null,recs=[];
   tx.objectStore('meta').get('state').onsuccess=e=>{meta=e.target.result||null};tx.objectStore('records').getAll().onsuccess=e=>{recs=e.target.result||[]};
@@ -597,16 +611,54 @@ setInterval(()=>{try{renderBk()}catch(e){}},60000);
 function stampName(){const d=new Date();return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`}
 async function fullBackup(withStationCsv){
   const name=`catchlogger_backup_${S.device}_${stampName()}.json`;
+  const phs=await photoAll();
   const body=JSON.stringify({app:'catch-logger',format:1,appVersion:APP_VERSION,exportedAt:new Date().toISOString(),device:S.device,
-    counts:{stations:S.stations.length,records:S.records.length},state:S});
+    counts:{stations:S.stations.length,records:S.records.length,photos:phs.length},state:S,
+    photos:phs.map(p=>({id:p.id,type:p.type,w:p.w,h:p.h,ts:p.ts,station:p.station,data:b64(p.buf)}))});
   const files=[new File([body],name,{type:'application/json'})];
   const st=active();if(withStationCsv&&st)files.push(new File(['﻿'+csv('flat','active')],`catch_flat_${st.h.opnum||st.h.date||'set'}_${S.device}.csv`,{type:'text/csv'}));
-  const done=()=>{S.backup={at:new Date().toISOString()};save();toast(`Backup saved (${S.records.length} records)`)};
-  try{if(navigator.canShare&&navigator.canShare({files})){await navigator.share({files,title:name});done();return true}}
-  catch(e){if(e&&e.name==='AbortError'){toast('Backup cancelled. Data is still on this iPad');return false}}
-  if(window.top!==window.self){toast('Backups save from the installed app, not this preview');return false}
+  const ok=await shareFiles(files,name,`Backup saved (${S.records.length} records${phs.length?`, ${phs.length} photos`:''})`);
+  if(ok){S.backup={at:new Date().toISOString()};save()}return ok}
+/* ---------- photos (unidentified fish only) ---------- */
+const isUnid=sp=>!!sp&&sp.c==='Unidentified fish';
+function photoTx(mode,fn){return new Promise(res=>{if(!db)return res(null);try{const tx=db.transaction('photos',mode),os=tx.objectStore('photos');let out=fn(os);
+  tx.oncomplete=()=>res(typeof out==='function'?out():out);tx.onerror=tx.onabort=()=>res(null)}catch(e){res(null)}})}
+const photoPut=ph=>photoTx('readwrite',os=>{os.put(ph);return true});
+const photoDel=ids=>photoTx('readwrite',os=>{(ids||[]).forEach(id=>os.delete(id));return true});
+const photoClear=()=>photoTx('readwrite',os=>{os.clear();return true});
+const photoCount=()=>photoTx('readonly',os=>{let n=0;os.count().onsuccess=e=>{n=e.target.result};return ()=>n});
+const photoGet=ids=>photoTx('readonly',os=>{const out=[];(ids||[]).forEach(id=>{os.get(id).onsuccess=e=>{if(e.target.result)out.push(e.target.result)}});return ()=>out}).then(x=>x||[]);
+const photoAll=()=>photoTx('readonly',os=>{let out=[];os.getAll().onsuccess=e=>{out=e.target.result||[]};return ()=>out}).then(x=>x||[]);
+async function shrinkPhoto(file){const url=URL.createObjectURL(file),img=new Image();
+  await new Promise((ok,bad)=>{img.onload=ok;img.onerror=bad;img.src=url});
+  const sc=Math.min(1,1600/Math.max(img.naturalWidth,img.naturalHeight)),c=document.createElement('canvas');
+  c.width=Math.round(img.naturalWidth*sc);c.height=Math.round(img.naturalHeight*sc);c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);
+  const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.82));return {buf:await blob.arrayBuffer(),w:c.width,h:c.height}}
+function photoNames(r){const st=S.stations.find(x=>x.id===r.station),op=(st&&(st.h.opnum||st.h.date))||'set',L=(UNIT_LBL[(st&&st.h.method)||'Trap']||'Unit').toLowerCase();
+  return (r.photos||[]).map((id,i)=>`${S.device}_${op}_${L}${r.unit}_rec${r.seq}_UNID_${i+1}.jpg`)}
+const b64=buf=>{const u=new Uint8Array(buf);let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)};
+const unb64=t=>{const s=atob(t),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u.buffer};
+/* Share files. iOS only allows sharing straight after a tap, so if preparing the files took too long,
+   show a "ready" button and share on that tap instead. */
+async function shareFiles(files,title,okMsg){
+  try{if(navigator.canShare&&navigator.canShare({files})){await navigator.share({files,title});toast(okMsg);return true}}
+  catch(e){if(e&&e.name==='AbortError'){toast('Cancelled. Data is still on this iPad');return false}
+    if(e&&e.name==='NotAllowedError'){return readyToShare(files,title,okMsg)}}
+  if(window.top!==window.self){toast('Files save from the installed app, not this preview');return false}
   files.forEach((f,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},800)},i*600));
-  done();return true}
+  toast(okMsg);return true}
+function readyToShare(files,title,okMsg){return new Promise(res=>{const m=$('#modal');
+  m.innerHTML=`<div class="mbox"><h3>Ready to save</h3><p class="note">${files.length} file(s) prepared.</p><div class="actions"><button class="btn primary" id="mGo">Save / share now</button><button class="btn" id="mNo">Cancel</button></div></div>`;m.hidden=false;
+  $('#mGo').onclick=async()=>{m.hidden=true;try{await navigator.share({files,title});toast(okMsg);res(true)}catch(e){toast('Not saved. Data is still on this iPad');res(false)}};
+  $('#mNo').onclick=()=>{m.hidden=true;res(false)}})}
+async function viewPhotos(id){const r=S.records.find(x=>x.id===id);if(!r)return;const m=$('#modal');const phs=await photoGet(r.photos);const names=photoNames(r);
+  const urls=phs.map(p=>URL.createObjectURL(new Blob([p.buf],{type:p.type||'image/jpeg'})));
+  m.innerHTML=`<div class="mbox wide"><h3>#${r.seq} ${esc(r.species)} · ${r.fl_mm===''?'no length':r.fl_mm+' mm'}</h3>
+   <div class="phgrid">${phs.map((p,i)=>`<figure><img src="${urls[i]}" alt="Photo ${i+1} of record ${r.seq}"><figcaption class="mono small">${esc(names[r.photos.indexOf(p.id)]||'')}</figcaption><button class="btn danger" data-phdel="${p.id}">Delete photo</button></figure>`).join('')||'<p class="note">No photos stored for this record.</p>'}</div>
+   <div class="actions"><button class="btn" id="mClose">Close</button></div></div>`;m.hidden=false;
+  const close=()=>{m.hidden=true;urls.forEach(u=>URL.revokeObjectURL(u))};$('#mClose').onclick=close;
+  m.querySelectorAll('[data-phdel]').forEach(b=>b.onclick=()=>armed(b,'Tap again to delete',async()=>{const pid=b.dataset.phdel;
+    r.photos=(r.photos||[]).filter(x=>x!==pid);await photoDel([pid]);save();close();toast('Photo deleted');if(view==='list')viewList();else renderEntry()}))}
 function fillDefaults(st){const f=fresh();['cur','serials','ui'].forEach(k=>{if(!st[k])st[k]=f[k]});if(!st.stations)st.stations=[];if(!st.records)st.records=[];
   if(!st.device)st.device=f.device;if(!st.preset)st.preset='north';Object.assign(st.cur,{editId:null,ack:false,warn:''});return st}
 function serialStr(s,k,n){return s.serials[k].prefix+String(n).padStart(5,'0')}
@@ -642,8 +694,9 @@ function renderTop(){
 function renderSpecies(){
   const pr=PRESETS[S.preset]||PRESETS.west;$('#presetName').textContent=pr.name+' list';
   const cur=S.cur.sp&&S.cur.sp.c;
-  const st=active(),cnt={};if(st)stRecs(st.id).forEach(r=>{if(!r.empty)cnt[r.species]=(cnt[r.species]||0)+1});
-  $('#spgrid').innerHTML=pr.list.map((s,i)=>{const f=famOf(s.s);return `<button class="btn sp${f?' fam '+f:''}" data-i="${i}" aria-pressed="${s.c===cur}"><span class="n">${esc(s.c)}</span><span class="s">${esc(s.s)}</span>${cnt[s.c]?`<span class="cnt" aria-label="${cnt[s.c]} in this set">${cnt[s.c]}</span>`:''}</button>`}).join('');
+  /* counts on the entry screen are for the current trap / drop / angler only; the Full list keeps whole-survey totals */
+  const st=active(),cnt={};if(st)stRecs(st.id).forEach(r=>{if(!r.empty&&+r.unit===+S.cur.unit)cnt[r.species]=(cnt[r.species]||0)+1});
+  $('#spgrid').innerHTML=pr.list.map((s,i)=>{const f=famOf(s.s);return `<button class="btn sp${f?' fam '+f:''}" data-i="${i}" aria-pressed="${s.c===cur}"><span class="n">${esc(s.c)}</span><span class="s">${esc(s.s)}</span>${cnt[s.c]?`<span class="cnt" aria-label="${cnt[s.c]} in this ${unitLabel().toLowerCase()}">${cnt[s.c]}</span>`:''}</button>`}).join('');
   $('#otherBox').hidden=!otherOpen;$('#spgrid').hidden=otherOpen; $('#otherBtn').textContent=otherOpen?'Close search':'Other species…';
   if(otherOpen)renderOther();
 }
@@ -685,7 +738,8 @@ function renderAttrs(){
   document.querySelectorAll('.seg[data-f="dr"] .btn').forEach(b=>b.disabled=c.fate!=='DIS'||c.teps);
   document.querySelectorAll('.seg[data-f="rc"] .btn').forEach(b=>b.disabled=c.fate!=='DIS'&&!c.teps);
   $('#tepsBtn').setAttribute('aria-pressed',String(!!c.teps));
-  $('#cmt').placeholder=c.teps?'Interaction description (required for TEPS)':'Fish comment (optional)';
+  {const pb=$('#photoBtn'),n=(c.photos||[]).length;pb.hidden=!isUnid(c.sp);pb.textContent=`📷 Photo${n?` (${n})`:''}`}
+  $('#cmt').placeholder=c.teps?'Interaction description (required for TEPS)':isUnid(c.sp)?'Comment':'Fish comment (optional)';
   let off={};
   $('#sampSeg').innerHTML=SAMPLES.map(([k,l])=>{
     const on=!!c.samp[k];let lab;
@@ -705,11 +759,13 @@ function fateHTML(r){
   if(r.teps)s+=' <span class="tag teps">TEPS</span>';return s}
 const fateFor=sp=>(sp&&sp.teps)?'DIS':(sp&&sp.d)||S.defFate||'RET';
 function sampList(r){return SAMPLES.filter(([k])=>r[k]).map(([k])=>r[k]).join(' ')}
-function rowHTML(r,showHook){
-  if(r.empty)return `<tr class="empty${S.cur.editId===r.id?' sel':''}" data-id="${r.id}"><td class="mono">${r.seq}</td><td class="mono">${r.unit}</td><td colspan="6">Empty ${esc(unitLabel().toLowerCase())}</td><td class="mono">${hhmm(r.ts)}</td></tr>`;
+function rowHTML(r,showHook,full){
+  const nph=(r.photos||[]).length;
+  const act=full?`<td><div class="delcell" data-cell="${r.id}">${nph?`<button class="btn mini" data-ph="${r.id}">📷 ${nph}</button>`:''}<button class="btn mini danger" data-del="${r.id}">Delete</button></div></td>`:'';
+  if(r.empty)return `<tr class="empty${S.cur.editId===r.id?' sel':''}" data-id="${r.id}"><td class="mono">${r.seq}</td><td class="mono">${r.unit}</td><td colspan="6">Empty ${esc(unitLabel().toLowerCase())}</td><td class="mono">${hhmm(r.ts)}</td>${act}</tr>`;
   const u=showHook&&r.hook?`${r.unit}·h${r.hook}`:r.unit;
   return `<tr data-id="${r.id}" class="${S.cur.editId===r.id?'sel':''}"><td class="mono">${r.seq}</td><td class="mono">${u}</td><td>${esc(r.species)}</td><td class="mono">${r.fl_mm===''?'—':r.fl_mm}</td><td>${r.sex}</td>`+
-    `<td>${fateHTML(r)}</td><td>${r.dep==='N'?'—':`<span class="tag dep">${r.dep==='P'?'Partial':'Whole'}</span>`}</td><td class="mono">${esc(sampList(r))||'—'}</td><td class="mono">${hhmm(r.ts)}</td></tr>`;
+    `<td>${fateHTML(r)}</td><td>${r.dep==='N'?'—':`<span class="tag dep">${r.dep==='P'?'Partial':'Whole'}</span>`}</td><td class="mono">${esc(sampList(r))||'—'}${nph&&!full?` 📷${nph}`:''}</td><td class="mono">${hhmm(r.ts)}</td>${act}</tr>`;
 }
 function renderRecent(){
   const st=active(),lf=$('#lastFish');
@@ -731,8 +787,8 @@ function key(k){const c=S.cur;
   c.ack=false;c.warn='';renderLen();renderAttrs()}
 
 /* ---------- commit ---------- */
-function resetFish(){const c=S.cur;Object.assign(c,{len:'',sex:'U',fate:fateFor(c.sp),dr:'',rc:'',teps:!!(c.sp&&c.sp.teps),dep:'N',samp:{},cmt:'',editId:null,ack:false,warn:''})}
-function pickSpecies(s){const c=S.cur;c.sp=s;c.ack=false;if(!c.editId){c.warn='';c.fate=fateFor(s);c.teps=!!s.teps;if(c.fate!=='DIS'){c.dr='';c.rc=''}}}
+function resetFish(){const c=S.cur;Object.assign(c,{len:'',sex:'U',fate:fateFor(c.sp),dr:'',rc:'',teps:!!(c.sp&&c.sp.teps),dep:'N',samp:{},cmt:'',photos:[],ackPhoto:false,editId:null,ack:false,warn:''})}
+function pickSpecies(s){const c=S.cur;c.sp=s;c.ack=false;c.ackPhoto=false;if(!c.editId){c.warn='';c.fate=fateFor(s);c.teps=!!s.teps;if(c.fate!=='DIS'){c.dr='';c.rc=''}}}
 function warn(m,confirmable){S.cur.warn=m;S.cur.ack=!!confirmable;renderAttrs()}
 function commit(){
   const c=S.cur,st=active();
@@ -745,18 +801,19 @@ function commit(){
   if(c.teps&&!c.cmt.trim()){warn('Describe the TEPS interaction in the comment box.');$('#cmt').focus();return}
   const dr=c.fate==='DIS'&&!c.teps?c.dr:'',rc=(c.fate==='DIS'||c.teps)?c.rc:'';
   if(len!==''&&!c.ack&&(len<MIN_FL||len>c.sp.max)){warn(`${len} mm is outside the expected range for ${c.sp.c} (${MIN_FL}–${c.sp.max} mm). Tap again to confirm.`,true);return}
+  if(isUnid(c.sp)&&!(c.photos||[]).length&&!c.ackPhoto){c.ackPhoto=true;c.ack=true;c.warn='No photo for this unidentified fish. Tap 📷 Photo, or tap Enter again to save without one.';renderAttrs();return}
   const f=liveFix();
   if(c.editId){
     const r=S.records.find(x=>x.id===c.editId);if(!r){resetFish();renderEntry();return}
     const voided=[];
     SAMPLES.forEach(([k])=>{if(c.samp[k]&&!r[k])r[k]=serialStr(S,k,S.serials[k].next++);else if(!c.samp[k]&&r[k]){voided.push(r[k]);r[k]=''}});
-    Object.assign(r,{unit:c.unit,hook:st.h.method==='Dropline'?c.hook:'',species:c.sp.c,sci:c.sp.s,caab:c.sp.caab,fl_mm:len,sex:c.sex,fate:c.fate,dr,rc,teps:!!c.teps,dep:c.dep,comment:c.cmt,
+    Object.assign(r,{unit:c.unit,hook:st.h.method==='Dropline'?c.hook:'',species:c.sp.c,sci:c.sp.s,caab:c.sp.caab,fl_mm:len,sex:c.sex,fate:c.fate,dr,rc,teps:!!c.teps,dep:c.dep,comment:c.cmt,photos:(c.photos||[]).slice(),
       edited:new Date().toISOString()+(voided.length?` voided:${voided.join(' ')}`:'')});
     save();resetFish();if(editFrom==='list'){editFrom=null;show('list')}else renderEntry();toast('Record #'+r.seq+' updated');return;
   }
   const r={id:uid(),station:st.id,device:S.device,seq:++st.seq,ts:new Date().toISOString(),unit:c.unit,hook:st.h.method==='Dropline'?c.hook:'',
     empty:false,species:c.sp.c,sci:c.sp.s,caab:c.sp.caab,fl_mm:len,sex:c.sex,fate:c.fate,dr,rc,teps:!!c.teps,dep:c.dep,oto:'',gon:'',fin:'',sto:'',
-    lat:f?f.lat:'',lon:f?f.lon:'',comment:c.cmt,edited:''};
+    lat:f?f.lat:'',lon:f?f.lon:'',comment:c.cmt,photos:(c.photos||[]).slice(),edited:''};
   SAMPLES.forEach(([k])=>{if(c.samp[k])r[k]=serialStr(S,k,S.serials[k].next++)});
   S.records.push(r);save();
   const s=sampList(r);resetFish();renderEntry();
@@ -770,7 +827,7 @@ function logEmpty(){
   toast(`${unitLabel()} ${S.cur.unit} logged empty`);S.cur.unit++;save();renderEntry();
 }
 function rollback(r){SAMPLES.forEach(([k])=>{if(r[k]&&r[k]===serialStr(S,k,S.serials[k].next-1))S.serials[k].next--})}
-function removeRec(r){rollback(r);S.records=S.records.filter(x=>x.id!==r.id)}
+function removeRec(r){rollback(r);if(r.photos&&r.photos.length)photoDel(r.photos);S.records=S.records.filter(x=>x.id!==r.id)}
 
 /* two-tap confirm */
 function armed(btn,label,fn){
@@ -782,7 +839,7 @@ function startEdit(id,from){
   const r=S.records.find(x=>x.id===id);if(!r||r.empty){if(r&&r.empty){armedDeleteEmpty(r)}return}
   const s=allSpecies().find(x=>x.c===r.species)||{c:r.species,s:r.sci,max:4000,caab:r.caab};
   Object.assign(S.cur,{sp:s,len:r.fl_mm===''?'':String(r.fl_mm),sex:r.sex,fate:r.fate,dr:r.dr||'',rc:r.rc||'',teps:!!r.teps,dep:r.dep,cmt:r.comment,unit:r.unit,hook:r.hook||S.cur.hook,
-    samp:Object.fromEntries(SAMPLES.map(([k])=>[k,!!r[k]])),editId:r.id,ack:false,warn:`Editing record #${r.seq}. Save changes, or Cancel edit.`});
+    samp:Object.fromEntries(SAMPLES.map(([k])=>[k,!!r[k]])),photos:(r.photos||[]).slice(),ackPhoto:false,editId:r.id,ack:false,warn:`Editing record #${r.seq}. Save changes, or Cancel edit.`});
   editFrom=from||null;show('entry');
 }
 function armedDeleteEmpty(r){toast('Empty records: delete from Full list');}
@@ -798,8 +855,8 @@ document.addEventListener('click',e=>{
   if(t.id==='otherBtn'){otherOpen=!otherOpen;renderSpecies();if(otherOpen)$('#otherQ').focus();return}
   if(t.matches('#keypad .btn')){key(t.dataset.k);return}
   if(t.id==='posBtn'){posFocus=S.cur.unit;show('positions');return}
-  if(t.id==='unitUp'){S.cur.unit++;renderUnit();save();return}
-  if(t.id==='unitDn'){S.cur.unit=Math.max(1,S.cur.unit-1);renderUnit();save();return}
+  if(t.id==='unitUp'){S.cur.unit++;renderUnit();renderSpecies();save();return}
+  if(t.id==='unitDn'){S.cur.unit=Math.max(1,S.cur.unit-1);renderUnit();renderSpecies();save();return}
   if(t.matches('#hooks .btn')){S.cur.hook=+t.dataset.h;renderUnit();save();return}
   const seg=t.closest('.seg[data-f]');
   if(seg){const c=S.cur,f=seg.dataset.f,v=t.dataset.v;
@@ -819,6 +876,15 @@ document.addEventListener('click',e=>{
   if(t.matches('#recentBody tr[data-id]')){startEdit(t.dataset.id);return}
 });
 $('#cmt').addEventListener('input',e=>{S.cur.cmt=e.target.value});
+$('#photoBtn').addEventListener('click',()=>{if(!db){toast('Photos need the main store, which is not available on this device');return}$('#photoIn').value='';$('#photoIn').click()});
+$('#photoIn').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;
+  try{const {buf,w,h}=await shrinkPhoto(f),id='ph_'+uid(),st=active();
+    const ok=await photoPut({id,type:'image/jpeg',buf,w,h,ts:new Date().toISOString(),station:st?st.id:''});
+    if(!ok){toast('Photo could not be saved. Check free space');return}
+    const c=S.cur;c.photos=(c.photos||[]).concat(id);c.ackPhoto=false;if(c.warn&&c.warn.startsWith('No photo')){c.warn='';c.ack=false}
+    if(c.editId){const r=S.records.find(x=>x.id===c.editId);if(r){r.photos=c.photos.slice()}}
+    save();renderAttrs();toast(`Photo ${c.photos.length} added`)}
+  catch(err){toast('Could not read that photo')}});
 $('#otherQ').addEventListener('input',renderOther);
 document.addEventListener('keydown',e=>{
   if(view!=='entry')return;const tg=e.target.tagName;if(tg==='INPUT'||tg==='TEXTAREA'||tg==='SELECT')return;
@@ -843,15 +909,27 @@ function viewList(){
   fish.forEach(r=>{tally[r.species]=tally[r.species]||[0,0];tally[r.species][0]++;if(isRet(r))tally[r.species][1]++});
   other.innerHTML=`<h2>Full list · Station ${esc(st.h.stationNo)}</h2>
   <div class="tally">${Object.entries(tally).sort((a,b)=>b[1][0]-a[1][0]).map(([k,v])=>`<span>${esc(k)} <b>${v[0]}</b> <span class="muted small">(${v[1]} ret)</span></span>`).join('')||'<span>No fish yet</span>'}</div>
-  <p class="note">Tap a fish to edit it on the entry screen. Empty-unit records can be deleted here.</p>
-  <div class="panel"><div class="tblwrap"><table><thead><tr><th>#</th><th>${unitLabel()}</th><th>Species</th><th>FL mm</th><th>Sex</th><th>Fate</th><th>Depred.</th><th>Samples</th><th>Time</th></tr></thead>
-  <tbody id="fullBody">${rs.slice().reverse().map(r=>rowHTML(r,st.h.method==='Dropline')).join('')}</tbody></table></div></div>
-  <div class="actions"><button class="btn danger" id="delSel" hidden>Delete selected record</button></div>`;
-  let sel=null;
-  other.querySelector('#fullBody').onclick=e=>{const tr=e.target.closest('tr[data-id]');if(!tr)return;const r=S.records.find(x=>x.id===tr.dataset.id);
-    if(r&&!r.empty){startEdit(r.id,'list');return}
-    sel=r;other.querySelectorAll('#fullBody tr').forEach(x=>x.classList.toggle('sel',x===tr));const b=$('#delSel');b.hidden=false;b.textContent=`Delete empty record #${r.seq}`};
-  other.querySelector('#delSel').onclick=e=>armed(e.target,'Tap again to delete',()=>{if(sel){removeRec(sel);save();viewList();toast('Deleted')}});
+  <p class="note">Tap a fish to edit it on the entry screen. <b>Delete</b> asks you to confirm before anything is removed.</p>
+  <div class="panel"><div class="tblwrap"><table><thead><tr><th>#</th><th>${unitLabel()}</th><th>Species</th><th>FL mm</th><th>Sex</th><th>Fate</th><th>Depred.</th><th>Samples</th><th>Time</th><th></th></tr></thead>
+  <tbody id="fullBody">${rs.slice().reverse().map(r=>rowHTML(r,st.h.method==='Dropline',true)).join('')||'<tr class="empty"><td colspan="10">No records yet.</td></tr>'}</tbody></table></div></div>`;
+  const body=other.querySelector('#fullBody');let timer=null,askAt=0;
+  const restore=()=>{clearTimeout(timer);body.querySelectorAll('tr.confirmrow').forEach(x=>x.remove());
+    body.querySelectorAll('[data-no]').forEach(b=>{b.outerHTML=`<button class="btn mini danger" data-del="${b.dataset.no}">Delete</button>`})};
+  body.onclick=e=>{
+    const ph=e.target.closest('[data-ph]');if(ph){viewPhotos(ph.dataset.ph);return}
+    const del=e.target.closest('[data-del]');
+    if(del){restore();const r=S.records.find(x=>x.id===del.dataset.del);if(!r)return;
+      /* the Delete button becomes Cancel in the same spot, so a double-tap cancels */
+      del.outerHTML=`<button class="btn mini" data-no="${r.id}">Cancel</button>`;askAt=Date.now();
+      const tr=body.querySelector(`tr[data-id="${r.id}"]`),cr=document.createElement('tr');cr.className='confirmrow';
+      cr.innerHTML=`<td colspan="10"><div class="confirmbar"><span class="delq">Delete record #${r.seq}${r.empty?' (empty '+esc(unitLabel().toLowerCase())+')':' '+esc(r.species)+(r.fl_mm!==''?' '+r.fl_mm+' mm':'')}${(r.photos||[]).length?' and its photos':''}? This cannot be undone.</span><button class="btn mini danger solid" data-yes="${r.id}">Yes, delete</button></div></td>`;
+      tr.after(cr);timer=setTimeout(restore,10000);return}
+    const yes=e.target.closest('[data-yes]');
+    if(yes){if(Date.now()-askAt<700)return;clearTimeout(timer);const r=S.records.find(x=>x.id===yes.dataset.yes);if(r){removeRec(r);save();toast(`Deleted #${r.seq}${r.empty?'':' '+r.species}`);viewList()}return}
+    if(e.target.closest('[data-no]')){restore();return}
+    if(e.target.closest('.delcell')||e.target.closest('.confirmrow'))return;
+    const tr=e.target.closest('tr[data-id]');if(!tr)return;const r=S.records.find(x=>x.id===tr.dataset.id);
+    if(r&&!r.empty)startEdit(r.id,'list')};
 }
 
 /* ---------- per-unit positions ---------- */
@@ -1036,8 +1114,8 @@ function viewStations(){
 /* export */
 const q=v=>{v=v==null?'':String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
 const HKEYS=[...HFK.map(f=>f.k),'set_time','set_lat','set_lon','haul_time','haul_lat','haul_lon'];
-const RKEYS=['id','station','device','seq','ts','tsl','unit','hook','empty','species','sci','caab','fl_mm','sex','fate','dr','rc','teps','dep','oto','gon','fin','sto','ulat','ulon','utin','utout','usoak','lat','lon','comment','edited'];
-const RNAMES={id:'record_id',station:'station_id',seq:'record_no',ts:'timestamp_utc',tsl:'time_local',empty:'empty_unit',sci:'scientific_name',caab:'caab_code',dr:'discard_reason',rc:'release_condition',teps:'teps_interaction',dep:'depredation',oto:'otolith_id',gon:'gonad_id',fin:'finclip_id',sto:'stomach_id',comment:'comment_or_interaction',ulat:'unit_lat',ulon:'unit_lon',utin:'unit_time_in',utout:'unit_time_out',usoak:'unit_soak_min',lat:'fish_gps_lat',lon:'fish_gps_lon'};
+const RKEYS=['id','station','device','seq','ts','tsl','unit','hook','empty','species','sci','caab','fl_mm','sex','fate','dr','rc','teps','dep','oto','gon','fin','sto','ulat','ulon','utin','utout','usoak','lat','lon','photos','comment','edited'];
+const RNAMES={id:'record_id',station:'station_id',seq:'record_no',ts:'timestamp_utc',tsl:'time_local',empty:'empty_unit',sci:'scientific_name',caab:'caab_code',dr:'discard_reason',rc:'release_condition',teps:'teps_interaction',dep:'depredation',oto:'otolith_id',gon:'gonad_id',fin:'finclip_id',sto:'stomach_id',comment:'comment_or_interaction',ulat:'unit_lat',ulon:'unit_lon',utin:'unit_time_in',utout:'unit_time_out',usoak:'unit_soak_min',photos:'photo_files',lat:'fish_gps_lat',lon:'fish_gps_lon'};
 function csv(kind,scope){
   const sts=scope==='all'?S.stations:S.stations.filter(s=>s.id===S.active),ids=new Set(sts.map(s=>s.id));
   const recs=S.records.filter(r=>ids.has(r.station));
@@ -1045,7 +1123,7 @@ function csv(kind,scope){
   const hcols=['station_id','device',...HKEYS,'soak_min'];
   const xlTime=iso=>{if(!iso)return '';const d=new Date(iso);return isNaN(d)?'':`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`};
 const rrow=r=>{const st=S.stations.find(x=>x.id===r.station),p=st&&st.pos&&st.pos[r.unit];
-  return RKEYS.map(k=>k==='empty'||k==='teps'?(r[k]?'Y':'N'):k==='tsl'?xlTime(r.ts):k==='ulat'?(hasPos(p)?p.lat:''):k==='ulon'?(hasPos(p)?p.lon:''):k==='utin'?xlTime(p&&p.tin):k==='utout'?xlTime(p&&p.tout):k==='usoak'?unitSoak(p):r[k])};
+  return RKEYS.map(k=>k==='empty'||k==='teps'?(r[k]?'Y':'N'):k==='tsl'?xlTime(r.ts):k==='ulat'?(hasPos(p)?p.lat:''):k==='ulon'?(hasPos(p)?p.lon:''):k==='utin'?xlTime(p&&p.tin):k==='utout'?xlTime(p&&p.tout):k==='usoak'?unitSoak(p):k==='photos'?photoNames(r).join(' '):r[k])};
   const rcols=RKEYS.map(k=>RNAMES[k]||k);
   let rows;
   if(kind==='stations')rows=[hcols,...sts.map(hrow)];
@@ -1064,7 +1142,7 @@ function viewExport(){
   <div class="tabs">${[['active','Active station'],['all','All stations']].map(([k,l])=>`<button class="btn" data-sc="${k}" aria-pressed="${exScope===k}">${l}</button>`).join('')}</div>
   <p class="note">Flat repeats the station header on every fish, like the lobster export. Fish and Station tables link on <b>station_id</b> for joining in R. Every record carries a unique record_id and the device ID, so files from several iPads combine without duplicates.</p>
   <textarea class="csv" id="csvOut" readonly aria-label="CSV output">${esc(txt)}</textarea>
-  <div class="actions"><button class="btn primary" id="copyCsv">Copy CSV</button>${top?'<button class="btn" id="dlCsv">Save CSV file</button>':''}<button class="btn" id="fullBk">Full backup file</button></div>
+  <div class="actions"><button class="btn primary" id="copyCsv">Copy CSV</button>${top?'<button class="btn" id="dlCsv">Save CSV file</button>':''}<button class="btn" id="fullBk">Full backup file</button><button class="btn" id="savePh">Save photos</button></div>
   <p class="note"><b>Full backup file</b> holds everything on this iPad (all stations, fish, positions, trap times, serials and settings) in one file. Send it to a second device with AirDrop, save it to a USB-C stick, or email it. Setup → Restore loads it onto any iPad.</p>
   ${top?'':'<p class="note">In this preview, use Copy. The installed version also saves the CSV to Files or shares it to Mail.</p>'}`;
   other.querySelectorAll('[data-ex]').forEach(b=>b.onclick=()=>{exKind=b.dataset.ex;viewExport()});
@@ -1073,6 +1151,10 @@ function viewExport(){
     p.then(()=>toast('CSV copied')).catch(()=>{ta.focus();ta.select();toast('Selected. Use the system Copy')})};
   if(top)$('#dlCsv').onclick=()=>saveCsv(exKind,exScope);
   $('#fullBk').onclick=()=>fullBackup(false);
+  $('#savePh').onclick=async()=>{const sts=exScope==='all'?S.stations:S.stations.filter(x=>x.id===S.active),ids=new Set(sts.map(x=>x.id));
+    const recs=S.records.filter(r=>ids.has(r.station)&&(r.photos||[]).length);if(!recs.length){toast('No photos in '+(exScope==='all'?'any station':'this station'));return}
+    const files=[];for(const r of recs){const phs=await photoGet(r.photos),names=photoNames(r);phs.forEach(p=>files.push(new File([p.buf],names[r.photos.indexOf(p.id)]||p.id+'.jpg',{type:'image/jpeg'})))}
+    shareFiles(files,'Catch Logger photos',`${files.length} photo(s) saved`)};
 }
 async function saveCsv(kind,scope,tag){
   const st=active(),txt=csv(kind,scope);
@@ -1120,27 +1202,30 @@ function viewSetup(){
   $('#clrAll').onclick=e=>armed(e.target,'Tap again to erase everything',()=>{
     const dev=S.device,ser=S.serials,pre=S.preset;S=fresh();S.device=dev;S.preset=pre;
     S.records=[];const h=defaultHeader();Object.assign(h,{vessel:'',location:'',subarea:'',comment:''});S.stations=[{id:uid(),h,created:new Date().toISOString(),seq:0}];
-    S.active=S.stations[0].id;S.serials=ser;S.cur.unit=1;resetFish();save();viewSetup();renderTop();toast('All data cleared')});
+    S.active=S.stations[0].id;S.serials=ser;S.cur.unit=1;resetFish();photoClear();save();viewSetup();renderTop();toast('All data cleared')});
 }
 
 async function storeInfo(){const el=$('#storeInfo');if(!el)return;let used='',pers='unknown';
   try{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();used=`${(e.usage/1e6).toFixed(1)} MB used of about ${Math.round(e.quota/1e6)} MB available`}}catch(e){}
   try{if(navigator.storage&&navigator.storage.persisted)pers=(await navigator.storage.persisted())?'granted':'not granted (iOS may still keep it; back up regularly)'}catch(e){}
-  el.innerHTML=`${S.records.length} records in ${S.stations.length} station(s). Main store: <b>${db?(dbOk===false?'last save failed':'OK'):'unavailable'}</b> · Second copy: <b>${lsOk?'OK':'full (main store still saving)'}</b> · Permanent storage: ${pers}${used?' · '+used:''}.`}
+  const nph=await photoCount();
+  el.innerHTML=`${S.records.length} records in ${S.stations.length} station(s)${nph?`, ${nph} photos`:''}. Main store: <b>${db?(dbOk===false?'last save failed':'OK'):'unavailable'}</b> · Second copy: <b>${lsOk?'OK':'full (main store still saving)'}</b> · Permanent storage: ${pers}${used?' · '+used:''}.`}
 function previewRestore(txt){const out=$('#rsOut');let b;
   try{b=JSON.parse(txt)}catch(e){out.innerHTML='<p class="warn">That file is not a Catch Logger backup (could not read it).</p>';return}
   if(!b||b.app!=='catch-logger'||!b.state||!Array.isArray(b.state.records)||!Array.isArray(b.state.stations)){out.innerHTML='<p class="warn">That file is not a Catch Logger backup.</p>';return}
+  const P=Array.isArray(b.photos)?b.photos:[];
+  const putPhotos=async(clear)=>{if(!db||!P.length){if(clear)await photoClear();return}if(clear)await photoClear();for(const x of P){await photoPut({id:x.id,type:x.type||'image/jpeg',w:x.w,h:x.h,ts:x.ts,station:x.station,buf:unb64(x.data)})}};
   const B=b.state,haveR=new Set(S.records.map(r=>r.id)),haveS=new Set(S.stations.map(x=>x.id));
   const newR=B.records.filter(r=>!haveR.has(r.id)).length,newS=B.stations.filter(x=>!haveS.has(x.id)).length;
-  out.innerHTML=`<p class="note">Backup from <b>${esc(b.device||'?')}</b>, saved ${esc((b.exportedAt||'').replace('T',' ').slice(0,16))} UTC: <b>${B.stations.length}</b> stations, <b>${B.records.length}</b> records. This iPad has ${S.stations.length} stations, ${S.records.length} records.</p>
+  out.innerHTML=`<p class="note">Backup from <b>${esc(b.device||'?')}</b>, saved ${esc((b.exportedAt||'').replace('T',' ').slice(0,16))} UTC: <b>${B.stations.length}</b> stations, <b>${B.records.length}</b> records${P.length?`, <b>${P.length}</b> photos`:''}. This iPad has ${S.stations.length} stations, ${S.records.length} records.</p>
    <div class="actions"><button class="btn primary" id="rsMerge">Add missing (${newS} stations, ${newR} records)</button><button class="btn danger" id="rsReplace">Replace everything on this iPad</button></div>
    <p class="note"><b>Add missing</b> keeps everything here and adds what is only in the backup. <b>Replace</b> makes this iPad an exact copy of the backup, including its Device ID and next sample serials, so it carries on where the other iPad left off. Make a backup of this iPad first if it holds anything you need.</p>`;
-  $('#rsMerge').onclick=()=>{const add=B.records.filter(r=>!haveR.has(r.id));S.records=S.records.concat(add).sort((x,y)=>String(x.ts).localeCompare(String(y.ts)));
+  $('#rsMerge').onclick=async()=>{await putPhotos(false);const add=B.records.filter(r=>!haveR.has(r.id));S.records=S.records.concat(add).sort((x,y)=>String(x.ts).localeCompare(String(y.ts)));
     B.stations.forEach(bs=>{const cur=S.stations.find(x=>x.id===bs.id);if(!cur){S.stations.push(bs);return}
       cur.seq=Math.max(cur.seq||0,bs.seq||0);if(bs.pos){cur.pos=cur.pos||{};Object.keys(bs.pos).forEach(u=>{if(!cur.pos[u])cur.pos[u]=bs.pos[u];else['tin','tout'].forEach(k=>{if(!cur.pos[u][k]&&bs.pos[u][k])cur.pos[u][k]=bs.pos[u][k]})})}});
     if(B.serials)SAMPLES.forEach(([k])=>{const a=S.serials[k],o=B.serials[k];if(o&&a&&o.prefix===a.prefix)a.next=Math.max(a.next,o.next)});
     save();toast(`Added ${newS} stations and ${add.length} records`);show('stations')};
-  $('#rsReplace').onclick=e=>armed(e.target,'Tap again to replace all data',()=>{const ui=S.ui;S=fillDefaults(JSON.parse(JSON.stringify(B)));S.ui=ui||S.ui;
+  $('#rsReplace').onclick=e=>armed(e.target,'Tap again to replace all data',async()=>{await putPhotos(true);const ui=S.ui;S=fillDefaults(JSON.parse(JSON.stringify(B)));S.ui=ui||S.ui;
     if(!S.stations.find(x=>x.id===S.active))S.active=S.stations.length?S.stations[0].id:null;applyUi();save();toast(`Restored ${S.records.length} records`);show('stations')});
 }
 $('#bkPill').onclick=()=>fullBackup(false);

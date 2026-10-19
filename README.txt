@@ -1,4 +1,4 @@
-CATCH LOGGER - OFFLINE IPAD APP (version v8)
+CATCH LOGGER - OFFLINE IPAD APP (version v10)
 ============================================
 
 What is in this folder
@@ -56,7 +56,7 @@ STEP 3 - TEST BEFORE THE BOAT
 
 UPDATING THE APP LATER
 ----------------------
-1. Edit the files, then in sw.js change  catch-logger-v8  to  catch-logger-v9  (and so on).
+1. Edit the files, then in sw.js change  catch-logger-v10  to  catch-logger-v11  (and so on).
    If you skip this, iPads keep using the old copy.
 2. Upload the changed files to the same GitHub repository (Add file > Upload files).
 3. Each iPad gets the update the next time the app is opened with internet,
@@ -76,4 +76,6 @@ KEEPING DATA SAFE
 - To move data to another iPad: Setup > Restore from a backup file > choose the
   catchlogger_backup_....json file. "Replace" makes it an exact copy, including the
   Device ID and next sample serials.
+- Photos of unidentified fish are kept only in the iPad's main store and in full
+  backup files, so back up regularly on photo-heavy days.
 - Deleting the home-screen icon DELETES ALL DATA on that iPad. Back up first.
