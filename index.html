@@ -24,16 +24,22 @@
   --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
   --r:10px;
+  --sn:#c94f3e; --sn-s:#fbe3de; --em:#b07a0c; --em-s:#fbf0d2; --cd:#5f7f1a; --cd-s:#e9f0d6; --tr:#3f78a8; --tr-s:#e0ebf5; --tg:#7a5a9a; --tg-s:#ece5f3;
+  --go-s:#dcf0e3; --amb:#a85f00; --amb-s:#fbe9d1; --neu:#4f5d66; --neu-s:#e6eaed; --male:#2f6db5; --fem:#b0407a; --on-fam:#ffffff;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0b1216; --surface:#121e26; --raised:#17272f; --ink:#e2ebef; --muted:#8fa1ab; --line:#27404b;
   --accent:#4cb2d0; --on-accent:#05202a; --accent-soft:#15384a;
   --go:#3ab36a; --on-go:#04200e; --warn:#f0a446; --warn-soft:#3a2810; --danger:#f0776d; --danger-soft:#3b1a17;
+  --sn:#ef7a69; --sn-s:#3a1f1b; --em:#e7a93a; --em-s:#382a12; --cd:#a8c94a; --cd-s:#26301a; --tr:#6aa7d8; --tr-s:#17293a; --tg:#a98bc9; --tg-s:#2a2236;
+  --go-s:#123220; --amb:#f0a446; --amb-s:#3a2810; --neu:#9aa9b2; --neu-s:#223038; --male:#6aa0e0; --fem:#e07ab0; --on-fam:#0b1216;
   color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0b1216; --surface:#121e26; --raised:#17272f; --ink:#e2ebef; --muted:#8fa1ab; --line:#27404b;
   --accent:#4cb2d0; --on-accent:#05202a; --accent-soft:#15384a;
   --go:#3ab36a; --on-go:#04200e; --warn:#f0a446; --warn-soft:#3a2810; --danger:#f0776d; --danger-soft:#3b1a17;
+  --sn:#ef7a69; --sn-s:#3a1f1b; --em:#e7a93a; --em-s:#382a12; --cd:#a8c94a; --cd-s:#26301a; --tr:#6aa7d8; --tr-s:#17293a; --tg:#a98bc9; --tg-s:#2a2236;
+  --go-s:#123220; --amb:#f0a446; --amb-s:#3a2810; --neu:#9aa9b2; --neu-s:#223038; --male:#6aa0e0; --fem:#e07ab0; --on-fam:#0b1216;
   color-scheme:dark}
 
 html,body{height:100%}
@@ -83,7 +89,11 @@ main{overflow:auto;padding-inline:16px;padding-block:0 16px;min-height:0}
 .sp .s{font-size:11.5px;font-style:italic;font-weight:400;opacity:.75}
 .otherbox{display:flex;flex-direction:column;gap:6px}
 .otherbox input{min-height:46px;border:1px solid var(--line);border-radius:8px;background:var(--raised);padding:0 12px}
-.otherlist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-height:260px;overflow:auto}
+.otherlist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-height:560px;overflow:auto}
+.ohead{grid-column:1/-1;font-family:var(--f-display);font-weight:600;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-top:4px}
+.osp .n i{font-style:italic;font-weight:600}
+.osp .s{font-style:normal}
+.tepsp{border-color:var(--danger)}
 
 .unitrow{display:grid;grid-template-columns:auto 64px 1fr 64px;gap:8px;align-items:center}
 .unitval{font-family:var(--f-mono);font-weight:700;font-size:34px;text-align:center;font-variant-numeric:tabular-nums}
@@ -115,6 +125,10 @@ main{overflow:auto;padding-inline:16px;padding-block:0 16px;min-height:0}
 .seg[data-f="fate"] .btn{font-size:15px;line-height:1.1}
 .posbtn{min-height:40px;font-size:13.5px;font-weight:500;font-family:var(--f-mono);text-align:left;padding:4px 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .posbtn.missing{border-color:var(--warn);color:var(--warn);background:var(--warn-soft);font-family:var(--f-body);font-weight:600}
+.tio{display:flex;gap:4px;align-items:center}
+.tin{min-height:42px;width:124px;border:1px solid var(--line);border-radius:8px;background:var(--raised);padding:0 6px;font-family:var(--f-mono);font-size:14px}
+.nowbtn{min-height:42px;padding:0 10px;font-size:13.5px;white-space:nowrap}
+.nowbtn.due{border-color:var(--accent);color:var(--accent)}
 .pin{min-height:42px;width:100%;min-width:150px;border:1px solid var(--line);border-radius:8px;background:var(--raised);padding:0 10px;font-family:var(--f-mono);font-size:14px}
 .pin.bad{border-color:var(--danger);background:var(--danger-soft)}
 .stampbtn{min-height:42px;padding:0 12px;font-size:14px}
@@ -132,6 +146,43 @@ main{overflow:auto;padding-inline:16px;padding-block:0 16px;min-height:0}
 .enter.edit{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 
+
+/* ---- v6: colour by meaning ---- */
+.fam{position:relative;padding-right:30px}
+.fam.sn{background:var(--sn-s);border-color:var(--sn)}.fam.em{background:var(--em-s);border-color:var(--em)}.fam.cd{background:var(--cd-s);border-color:var(--cd)}.fam.tr{background:var(--tr-s);border-color:var(--tr)}.fam.tg{background:var(--tg-s);border-color:var(--tg)}
+.fam.sn[aria-pressed="true"]{background:var(--sn)}.fam.em[aria-pressed="true"]{background:var(--em)}.fam.cd[aria-pressed="true"]{background:var(--cd)}.fam.tr[aria-pressed="true"]{background:var(--tr)}.fam.tg[aria-pressed="true"]{background:var(--tg)}
+.fam[aria-pressed="true"]{color:var(--on-fam)}
+.cnt{position:absolute;top:6px;right:5px;font-family:var(--f-mono);font-size:12px;font-weight:700;min-width:22px;height:20px;padding:0 5px;border-radius:999px;background:var(--raised);color:var(--ink);border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+.seg[data-f="fate"] [data-v="RET"][aria-pressed="true"]{background:var(--go);border-color:var(--go);color:var(--on-go)}
+.seg[data-f="fate"] [data-v="BT"][aria-pressed="true"]{background:var(--amb);border-color:var(--amb);color:var(--on-fam)}
+.seg[data-f="fate"] [data-v="DIS"][aria-pressed="true"]{background:var(--neu);border-color:var(--neu);color:var(--on-fam)}
+.seg[data-f="dr"] .btn:not(:disabled){background:var(--amb-s);border-color:var(--amb);color:var(--amb)}
+.seg[data-f="dr"] .btn[aria-pressed="true"]{background:var(--amb);color:var(--on-fam)}
+.seg[data-f="rc"] [data-v="AU"]:not(:disabled){background:var(--go-s);border-color:var(--go);color:var(--go)}
+.seg[data-f="rc"] [data-v="AI"]:not(:disabled){background:var(--amb-s);border-color:var(--amb);color:var(--amb)}
+.seg[data-f="rc"] [data-v="DD"]:not(:disabled){background:var(--danger-soft);border-color:var(--danger);color:var(--danger)}
+.seg[data-f="rc"] [data-v="UN"]:not(:disabled){background:var(--neu-s);border-color:var(--neu);color:var(--neu)}
+.seg[data-f="rc"] [data-v="AU"][aria-pressed="true"]{background:var(--go);color:var(--on-go)}
+.seg[data-f="rc"] [data-v="AI"][aria-pressed="true"]{background:var(--amb);color:var(--on-fam)}
+.seg[data-f="rc"] [data-v="DD"][aria-pressed="true"]{background:var(--danger);color:var(--on-fam)}
+.seg[data-f="rc"] [data-v="UN"][aria-pressed="true"]{background:var(--neu);color:var(--on-fam)}
+.seg[data-f="sex"] [data-v="M"][aria-pressed="true"]{background:var(--male);border-color:var(--male);color:var(--on-fam)}
+.seg[data-f="sex"] [data-v="F"][aria-pressed="true"]{background:var(--fem);border-color:var(--fem);color:var(--on-fam)}
+.seg[data-f="dep"] [data-v="P"][aria-pressed="true"],.seg[data-f="dep"] [data-v="W"][aria-pressed="true"]{background:var(--danger);border-color:var(--danger);color:var(--on-fam)}
+#sampSeg .samp[aria-pressed="true"]{background:var(--go);border-color:var(--go);color:var(--on-go)}
+.lendisp.has{border-color:var(--go);box-shadow:inset 0 0 0 2px var(--go)}
+.lastfish{border:1px solid var(--go);background:var(--go-s);color:var(--go);border-radius:10px;padding:8px 12px;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lastfish b{font-family:var(--f-mono)}
+.uibtn{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;min-height:30px;border-radius:999px;border:1px solid var(--line);background:var(--raised);color:var(--ink);cursor:pointer;white-space:nowrap}
+.uibtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media (min-width:1051px){.entry.lefty .col-attr{order:1}.entry.lefty .col-pad{order:2}.entry.lefty .col-species{order:3}.entry.lefty .recent{order:4}}
+
+/* ---- v7: save + backup status ---- */
+.bk.ok{border-color:var(--go);color:var(--go)}.bk.amb{border-color:var(--amb);color:var(--amb);background:var(--amb-s)}.bk.red{border-color:var(--danger);color:var(--danger);background:var(--danger-soft)}
+.pill.bad{background:var(--danger-soft);border-color:var(--danger);color:var(--danger)}
+.savefail{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-block:10px 0;padding:10px 14px;border-radius:10px;background:var(--danger);color:var(--on-fam);font-size:14.5px}
+.savefail .btn{min-height:44px;background:var(--raised);color:var(--ink);border-color:var(--raised);white-space:nowrap}
+.restore{display:flex;flex-direction:column;gap:8px}
 /* tables */
 .tblwrap{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:14px}
@@ -187,9 +238,9 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
   <header class="top">
     <div class="brand">Catch Logger</div>
     <div class="stn"><b id="stnTitle">—</b><span id="stnSub">—</span></div>
-    <div class="pills"><span class="pill" id="gpsPill">GPS …</span><span class="pill" id="savePill">Saved</span></div>
+    <div class="pills"><span class="pill" id="gpsPill">GPS …</span><span class="pill" id="savePill">Saved</span><button class="uibtn bk" id="bkPill">Backup</button><button class="uibtn" id="themeBtn"></button><button class="uibtn" id="handBtn"></button></div>
     <nav class="nav" id="nav">
-      <button data-v="stations" aria-current="page">Stations</button>
+      <button data-v="stations" aria-current="page">Survey</button>
       <button data-v="entry">Data entry</button>
       <button data-v="positions">Positions</button>
       <button data-v="list">Full list</button>
@@ -199,6 +250,7 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
     </nav>
   </header>
   <main id="main">
+    <div class="savefail" id="saveFail" role="alert" hidden><span><b>The last entry could not be saved on this iPad.</b> Keep entering; it retries on every fish. Make a backup now, then check free space in iPad Settings.</span><button class="btn" id="bkNow2">Back up now</button></div>
     <section class="entry" id="v-entry">
       <div class="panel col-species">
         <div class="phead"><span class="lbl">Species</span><span class="muted small" id="presetName"></span></div>
@@ -264,6 +316,7 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
           <input class="cmt" id="cmt" placeholder="Fish comment (optional)" aria-label="Fish comment">
         </div>
         <div class="warn" id="warnBox" hidden></div>
+        <div class="lastfish" id="lastFish" hidden></div>
         <button class="btn enter" id="enterBtn">Enter</button>
         <div class="row2">
           <button class="btn" id="emptyBtn">Empty trap</button>
@@ -283,6 +336,7 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
 
 <script>
 (function(){
+const APP_VERSION='v8';
 const LS_KEY='demersalCatchLogger.v2';
 const $=s=>document.querySelector(s);
 const esc=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -293,6 +347,7 @@ const hhmm=iso=>{const d=new Date(iso);return z(d.getHours())+':'+z(d.getMinutes
 
 /* Species presets. CAAB codes are left blank on purpose: fill them from the CAAB list before use.
    max = sanity-check ceiling for fork length (mm); placeholder values, adjust per species. */
+const MIN_FL=30; /* mm: shortest length accepted without a confirm tap */
 const sp=(c,s,max,x)=>Object.assign({c,s,max,caab:''},x||{});
 const PRESETS={
   west:{name:'West Coast',list:[
@@ -305,29 +360,130 @@ const PRESETS={
     sp('Swallowtail','Centroberyx lineatus',450),sp('Spangled emperor','Lethrinus nebulosus',900),
     sp('Redlip morwong','Goniistius rubrolabiatus',500)]},
   north:{name:'Kimberley trap (NDSF sheet)',list:[
-    sp('Goldband snapper','Pristipomoides multidens',1100),sp('Sharptooth jobfish','Pristipomoides typus',800),
-    sp('Red emperor','Lutjanus sebae',1100),sp('Saddletail snapper','Lutjanus malabaricus',1000),
-    sp('Crimson snapper','Lutjanus erythropterus',750),sp('Brownstripe snapper','Lutjanus vitta',450),
-    sp('Indonesian snapper','Lutjanus bitaeniatus',550),sp('Moses snapper','Lutjanus russellii',550),
-    sp('Darktail snapper','Lutjanus lemniscatus',700),sp('Spangled emperor','Lethrinus nebulosus',900),
-    sp('Redspot emperor','Lethrinus lentjan',550),sp('Yellowspotted rockcod','Epinephelus areolatus',500),
-    sp('Duskytail grouper','Epinephelus bleekeri',800),sp('Frostback rockcod','Epinephelus bilobatus',450),
-    sp('Rankin cod','Epinephelus multinotatus',1000,{note:'Sheet lists "Epinephelus rankini"'}),
+    sp('Goldband snapper','Pristipomoides multidens',1100),
+    sp('Sharptooth jobfish','Pristipomoides typus',880),
+    sp('Red emperor','Lutjanus sebae',1100),
+    sp('Saddletail snapper','Lutjanus malabaricus',1100),
+    sp('Crimson snapper','Lutjanus erythropterus',660),
+    sp('Brownstripe snapper','Lutjanus vitta',440),
+    sp('Indonesian snapper','Lutjanus bitaeniatus',330),
+    sp('Moses snapper','Lutjanus russellii',500),
+    sp('Darktail snapper','Lutjanus lemniscatus',720),
+    sp('Spangled emperor','Lethrinus nebulosus',990),
+    sp('Redspot emperor','Lethrinus lentjan',550),
+    sp('Yellowspotted rockcod','Epinephelus areolatus',550),
+    sp('Duskytail grouper','Epinephelus bleekeri',840),
+    sp('Frostback rockcod','Epinephelus bilobatus',440),
+    sp('Rankin cod','Epinephelus multinotatus',1100),
+    sp('Onion trevally','Carangoides caeruleopinnatus',550),
+    sp('Longnose trevally','Carangoides chrysophrys',830),
+    sp('Goldspotted trevally','Carangoides fulvoguttatus',1430),
+    sp('Golden trevally','Gnathanodon speciosus',1320),
     sp('Starry triggerfish','Abalistes stellatus',650,{d:'DIS'})]}
 };
-const EXTRA=[sp('Yellowtail kingfish','Seriola lalandi',1900),sp('Silver trevally','Pseudocaranx sp.',900),
+const OTHER_NORTH=[
+  sp("Rusty jobfish","Aphareus rutilans",1650),
+  sp("Green jobfish","Aprion virescens",1210),
+  sp("Frypan bream","Argyrops spinifer",770),
+  sp("Goldspot pigfish","Bodianus perditio",720),
+  sp("Tille trevally","Caranx tille",880),
+  sp("Peacock rockcod","Cephalopholis argus",550),
+  sp("Golden rockcod","Cephalopholis aurantia",550),
+  sp("Garish rockcod","Cephalopholis igarashiensis",470),
+  sp("Coral rockcod","Cephalopholis miniata",500),
+  sp("Tomato rockcod","Cephalopholis sonnerati",640),
+  sp("Humphead Maori wrasse","Cheilinus undulatus",2530),
+  sp("Bluespotted tuskfish","Choerodon cauteroma",440),
+  sp("Blue tuskfish","Choerodon cyanodus",770),
+  sp("Blackspot tuskfish","Choerodon schoenleinii",880),
+  sp("Eyebrow tuskfish","Choerodon zamboangae",500),
+  sp("Barramundi cod","Cromileptes altivelis",770),
+  sp("Yellowback bream","Dentex tumifrons",390),
+  sp("Painted sweetlip","Diagramma labiosum",990),
+  sp("Banded grouper","Epinephelus amblycephalus",550),
+  sp("Brown spotted rockcod","Epinephelus chlorostigma",830),
+  sp("Gold spotted rockcod","Epinephelus coioides",1430),
+  sp("Flowery rockcod","Epinephelus fuscoguttatus",1100),
+  sp("Blackspotted rockcod","Epinephelus malabaricus",1430),
+  sp("Netfin grouper","Epinephelus miliaris",550),
+  sp("Comet grouper","Epinephelus morrhua",990),
+  sp("Dotdash grouper","Epinephelus poecilonotus",720),
+  sp("Camouflage grouper","Epinephelus polyphekadion",990),
+  sp("Radiant rockcod","Epinephelus radiatus",770),
+  sp("Chinaman rockcod","Epinephelus rivulatus",510),
+  sp("Sixbar grouper","Epinephelus sexfasciatus",330),
+  sp("Blackdotted grouper","Epinephelus stictus",450),
+  sp("Potato grouper","Epinephelus tukula",2200),
+  sp("Ruby snapper","Etelis carbunculus",1430),
+  sp("Flame snapper","Etelis coruscans",1650),
+  sp("Pale ruby snapper","Etelis radiosus",880),
+  sp("Northern pearl perch","Glaucosoma buergeri",660),
+  sp("Threadfin pearl perch","Glaucosoma magnificum",390),
+  sp("Swallowtail seabream","Gymnocranius elongatus",390),
+  sp("Robinson's seabream","Gymnocranius grandoculis",880),
+  sp("Lined javelinfish","Hapalogenys kishinouyei",330),
+  sp("Eightbar grouper","Hyporthodus octofasciatus",1100),
+  sp("Yellowtail emperor","Lethrinus atkinsoni",550),
+  sp("Orangespotted emperor","Lethrinus erythracanthus",880),
+  sp("Longfin emperor","Lethrinus erythropterus",550),
+  sp("Grass emperor","Lethrinus laticaudis",880),
+  sp("Redthroat emperor","Lethrinus miniatus",990),
+  sp("Longnose emperor","Lethrinus olivaceus",1100),
+  sp("Bluespotted emperor","Lethrinus punctulatus",440),
+  sp("Drab emperor","Lethrinus ravus",330),
+  sp("Spotcheek emperor","Lethrinus rubrioperculatus",550),
+  sp("Yellowlip emperor","Lethrinus xanthochilus",660),
+  sp("Tang's snapper","Lipocheilus carnolabrum",660),
+  sp("Mangrove jack","Lutjanus argentimaculatus",1320),
+  sp("Red bass","Lutjanus bohar",830),
+  sp("Moluccan snapper","Lutjanus boutton",330),
+  sp("Stripey snapper","Lutjanus carponotatus",440),
+  sp("Paddletail","Lutjanus gibbus",550),
+  sp("Golden snapper","Lutjanus johnii",770),
+  sp("Bluestriped snapper","Lutjanus kasmira",390),
+  sp("Fiveline snapper","Lutjanus quinquelineatus",420),
+  sp("Maori snapper","Lutjanus rivulatus",770),
+  sp("Rosy threadfin bream","Nemipterus furcosus",330),
+  sp("Saddleback snapper","Paracaesio kusakarii",660),
+  sp("Cocoa snapper","Paracaesio stonei",550),
+  sp("Brown sweetlips","Plectorhinchus gibbosus",660),
+  sp("Passionfruit coral trout","Plectropomus areolatus",770),
+  sp("Bluespotted coral trout","Plectropomus laevis",1380),
+  sp("Common coral trout","Plectropomus leopardus",770),
+  sp("Barcheeked coral trout","Plectropomus maculatus",990),
+  sp("Vermicular cod","Plectropomus oligacanthus",660),
+  sp("Lunartail bigeye","Priacanthus hamrur",500),
+  sp("Purplespotted bigeye","Priacanthus tayenus",440),
+  sp("Ornate snapper","Pristipomoides argyrogrammicus",440),
+  sp("Goldflag snapper","Pristipomoides auricilla",500),
+  sp("Rosy snapper","Pristipomoides filamentosus",880),
+  sp("Lavender snapper","Pristipomoides sieboldii",660),
+  sp("Oblique-banded snapper","Pristipomoides zonatus",550),
+  sp("Cobia","Rachycentron canadum",2200),
+  sp("Golden grouper","Saloptia powelli",520),
+  sp("Bluebarred parrotfish","Scarus ghobban",990),
+  sp("Monocle bream","Scolopsis monogramma",330),
+  sp("Amberjack","Seriola dumerili",1430),
+  sp("Highfin amberjack","Seriola rivoliana",770),
+  sp("Great barracuda","Sphyraena barracuda",2200),
+  sp("Chinaman fish","Symphorus nematophorus",1100),
+  sp("White edge coronation trout","Variola albimarginata",660),
+  sp("Yellow edge coronation trout","Variola louti",890),
+  sp("Mozambique seabream","Wattsia mossambica",600),
+  sp("John dory","Zeus faber",830)];
+const OTHER_WEST=[sp('Yellowtail kingfish','Seriola lalandi',1900),sp('Silver trevally','Pseudocaranx sp.',900),
   sp('Western king wrasse','Coris auricularis',450),sp('Leatherjacket','Monacanthidae',700),
   sp('Wobbegong','Orectolobus sp.',2500),sp('Gummy shark','Mustelus antarcticus',1800),
   sp('Dusky whaler','Carcharhinus obscurus',3500),sp('Sandbar shark','Carcharhinus plumbeus',2500),
-  sp('Bronze whaler','Carcharhinus brachyurus',3000),sp('Blue-lined emperor','Lethrinus laticaudis',700),
-  sp('Chinaman cod','Epinephelus rivulatus',450),sp('Coral trout','Plectropomus spp.',1000),
-  sp('Goldspotted rockcod','Epinephelus coioides',1500),sp('Painted sweetlips','Diagramma labiosum',1000),
-  sp('Ruby snapper','Etelis sp.',1200),sp('Stripey snapper','Lutjanus carponotatus',450),
-  sp('Unidentified fish','',4000),
-  sp('Sea snake (TEPS)','Hydrophiinae',2000,{teps:true}),sp('Marine turtle (TEPS)','Cheloniidae',1500,{teps:true}),
-  sp('Sawfish (TEPS)','Pristidae',7000,{teps:true}),sp('Dolphin (TEPS)','Delphinidae',4000,{teps:true}),
-  sp('Other TEPS','',9000,{teps:true})];
-const allSpecies=()=>{const m=new Map();[...PRESETS.west.list,...PRESETS.north.list,...EXTRA].forEach(s=>m.set(s.c,s));return [...m.values()]};
+  sp('Bronze whaler','Carcharhinus brachyurus',3000),sp('Chinaman rockcod','Epinephelus rivulatus',510)];
+/* Always at the top of the Other list, whichever region is selected. */
+const PINNED=[sp('Unidentified fish','',4000),
+  sp('Sea snake (TEPS)','Hydrophiinae',2500,{teps:true}),sp('Olive sea snake (TEPS)','Aipysurus laevis',2200,{teps:true}),
+  sp('Marine turtle (TEPS)','Cheloniidae',1500,{teps:true})];
+const OTHER={north:OTHER_NORTH,west:OTHER_WEST};
+const bySci=(a,b)=>(a.s||a.c).localeCompare(b.s||b.c);
+const otherFor=k=>(OTHER[k]||[]).slice().sort(bySci);
+const allSpecies=()=>{const m=new Map();[...PRESETS.west.list,...PRESETS.north.list,...OTHER_WEST,...OTHER_NORTH,...PINNED].forEach(s=>{if(!m.has(s.c))m.set(s.c,s)});return [...m.values()]};
 
 const SAMPLES=[['oto','Otolith'],['gon','Gonad'],['fin','Fin clip'],['sto','Stomach']];
 const UNIT_LBL={'Trap':'Trap','Dropline':'Drop','Hook and line':'Angler'};
@@ -402,9 +558,57 @@ function fresh(){
     s.stations.push({id:uid(),h,created:new Date().toISOString(),example:true,seq:0})});
   return s;
 }
+/* ---------- storage: two independent copies on the iPad ----------
+   1. IndexedDB (main): one row per fish, only changed rows are written; holds hundreds of MB.
+   2. localStorage (second copy): the whole state, for as long as it fits (~14,000 fish).
+   A save only counts as failed if BOTH copies fail. Entry is never blocked. */
+const DB_NAME='catchLogger';let db=null,dbOk=null,lsOk=true,writing=Promise.resolve(),pend=false;const savedJson=new Map();
+function openDB(){return new Promise(res=>{try{const rq=indexedDB.open(DB_NAME,1);
+  rq.onupgradeneeded=()=>{const d=rq.result;if(!d.objectStoreNames.contains('meta'))d.createObjectStore('meta');if(!d.objectStoreNames.contains('records'))d.createObjectStore('records',{keyPath:'id'})};
+  rq.onsuccess=()=>res(rq.result);rq.onerror=()=>res(null);rq.onblocked=()=>res(null)}catch(e){res(null)}})}
+function idbLoad(){return new Promise(res=>{try{const tx=db.transaction(['meta','records'],'readonly');let meta=null,recs=[];
+  tx.objectStore('meta').get('state').onsuccess=e=>{meta=e.target.result||null};tx.objectStore('records').getAll().onsuccess=e=>{recs=e.target.result||[]};
+  tx.oncomplete=()=>res(meta?Object.assign({},meta,{records:recs}):null);tx.onerror=tx.onabort=()=>res(null)}catch(e){res(null)}})}
+function idbWrite(){return new Promise(res=>{try{const meta=Object.assign({},S);delete meta.records;
+  const tx=db.transaction(['meta','records'],'readwrite'),rs=tx.objectStore('records'),seen=new Set(),changed=[];
+  S.records.forEach(r=>{seen.add(r.id);const j=JSON.stringify(r);if(savedJson.get(r.id)!==j){rs.put(JSON.parse(j));changed.push([r.id,j])}});
+  const gone=[...savedJson.keys()].filter(id=>!seen.has(id));gone.forEach(id=>rs.delete(id));
+  tx.objectStore('meta').put(JSON.parse(JSON.stringify(meta)),'state');
+  tx.oncomplete=()=>{changed.forEach(([i,j])=>savedJson.set(i,j));gone.forEach(i=>savedJson.delete(i));res(true)};
+  tx.onerror=tx.onabort=()=>res(false)}catch(e){res(false)}})}
 function load(){try{const t=localStorage.getItem(LS_KEY);if(t)return JSON.parse(t)}catch(e){}return null}
-function save(){let ok=true;try{localStorage.setItem(LS_KEY,JSON.stringify(S))}catch(e){ok=false}
-  const p=$('#savePill');p.textContent=ok?'Saved on device':'Not saving';p.className='pill '+(ok?'ok':'bad')}
+function save(){S.savedAt=new Date().toISOString();
+  lsOk=true;try{localStorage.setItem(LS_KEY,JSON.stringify(S))}catch(e){lsOk=false}
+  if(db){if(!pend){pend=true;writing=writing.then(()=>{pend=false;return idbWrite()}).then(ok=>{dbOk=ok;saveStatus()})}}else dbOk=false;
+  saveStatus()}
+function saveStatus(){
+  const okNow=lsOk||dbOk===true||(dbOk===null&&!!db),p=$('#savePill');
+  p.textContent=okNow?'Saved on device':'NOT SAVING';p.className='pill '+(okNow?'ok':'bad');
+  const b=$('#saveFail');if(b)b.hidden=okNow;renderBk()}
+/* ---------- backups ---------- */
+function bkLevel(){const bk=S.backup&&S.backup.at?new Date(S.backup.at):null;
+  const since=S.records.filter(r=>!bk||new Date(r.ts)>bk).length,mins=bk?(Date.now()-bk)/60000:Infinity;
+  if(!S.records.length)return {lvl:'ok',txt:'No data yet'};
+  if(!bk)return {lvl:'red',txt:`Not backed up · ${since} records`};
+  const lvl=since===0?'ok':(since>=1000||mins>=240)?'red':(since>=300||mins>=120)?'amb':'ok';
+  return {lvl,txt:`Backup ${hmOf(S.backup.at)}${since?` · ${since} since`:' · up to date'}`}}
+function renderBk(){const b=$('#bkPill');if(!b||!S)return;const {lvl,txt}=bkLevel();b.textContent=txt;b.className='uibtn bk '+lvl}
+setInterval(()=>{try{renderBk()}catch(e){}},60000);
+function stampName(){const d=new Date();return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`}
+async function fullBackup(withStationCsv){
+  const name=`catchlogger_backup_${S.device}_${stampName()}.json`;
+  const body=JSON.stringify({app:'catch-logger',format:1,appVersion:APP_VERSION,exportedAt:new Date().toISOString(),device:S.device,
+    counts:{stations:S.stations.length,records:S.records.length},state:S});
+  const files=[new File([body],name,{type:'application/json'})];
+  const st=active();if(withStationCsv&&st)files.push(new File(['﻿'+csv('flat','active')],`catch_flat_${st.h.opnum||st.h.date||'set'}_${S.device}.csv`,{type:'text/csv'}));
+  const done=()=>{S.backup={at:new Date().toISOString()};save();toast(`Backup saved (${S.records.length} records)`)};
+  try{if(navigator.canShare&&navigator.canShare({files})){await navigator.share({files,title:name});done();return true}}
+  catch(e){if(e&&e.name==='AbortError'){toast('Backup cancelled. Data is still on this iPad');return false}}
+  if(window.top!==window.self){toast('Backups save from the installed app, not this preview');return false}
+  files.forEach((f,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},800)},i*600));
+  done();return true}
+function fillDefaults(st){const f=fresh();['cur','serials','ui'].forEach(k=>{if(!st[k])st[k]=f[k]});if(!st.stations)st.stations=[];if(!st.records)st.records=[];
+  if(!st.device)st.device=f.device;if(!st.preset)st.preset='north';Object.assign(st.cur,{editId:null,ack:false,warn:''});return st}
 function serialStr(s,k,n){return s.serials[k].prefix+String(n).padStart(5,'0')}
 const active=()=>S.stations.find(x=>x.id===S.active)||null;
 const stRecs=id=>S.records.filter(r=>r.station===id);
@@ -427,7 +631,7 @@ setInterval(renderGPS,15000);
 /* ---------- top bar ---------- */
 function renderTop(){
   const st=active();
-  if(!st){$('#stnTitle').textContent='No station';$('#stnSub').textContent='Create one in Stations';return}
+  if(!st){$('#stnTitle').textContent='No station';$('#stnSub').textContent='Create one in Survey';return}
   const h=st.h, rs=stRecs(st.id), fish=rs.filter(r=>!r.empty);
   const recent=fish.filter(r=>Date.now()-new Date(r.ts).getTime()<15*60000).length*4;
   $('#stnTitle').textContent=`${h.method} · Stn ${h.stationNo} · ${h.location||'—'}`;
@@ -438,27 +642,41 @@ function renderTop(){
 function renderSpecies(){
   const pr=PRESETS[S.preset]||PRESETS.west;$('#presetName').textContent=pr.name+' list';
   const cur=S.cur.sp&&S.cur.sp.c;
-  $('#spgrid').innerHTML=pr.list.map((s,i)=>`<button class="btn sp" data-i="${i}" aria-pressed="${s.c===cur}"><span class="n">${esc(s.c)}</span><span class="s">${esc(s.s)}</span></button>`).join('');
-  $('#otherBox').hidden=!otherOpen; $('#otherBtn').textContent=otherOpen?'Close search':'Other species…';
+  const st=active(),cnt={};if(st)stRecs(st.id).forEach(r=>{if(!r.empty)cnt[r.species]=(cnt[r.species]||0)+1});
+  $('#spgrid').innerHTML=pr.list.map((s,i)=>{const f=famOf(s.s);return `<button class="btn sp${f?' fam '+f:''}" data-i="${i}" aria-pressed="${s.c===cur}"><span class="n">${esc(s.c)}</span><span class="s">${esc(s.s)}</span>${cnt[s.c]?`<span class="cnt" aria-label="${cnt[s.c]} in this set">${cnt[s.c]}</span>`:''}</button>`}).join('');
+  $('#otherBox').hidden=!otherOpen;$('#spgrid').hidden=otherOpen; $('#otherBtn').textContent=otherOpen?'Close search':'Other species…';
   if(otherOpen)renderOther();
 }
+function famOf(sci){sci=sci||'';return /^(Lutjanus|Pristipomoides)\b/.test(sci)?'sn':/^Lethrinus\b/.test(sci)?'em':/^Epinephelus\b/.test(sci)?'cd':/^(Carangoides|Gnathanodon)\b/.test(sci)?'tr':/^Abalistes\b/.test(sci)?'tg':''}
+function applyUi(){S.ui=S.ui||{};const t=S.ui.theme||'dark',h=S.ui.hand||'right';
+  document.documentElement.setAttribute('data-theme',t);
+  const m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',t==='dark'?'#121e26':'#f8fafb');
+  $('#v-entry').classList.toggle('lefty',h==='left');
+  $('#themeBtn').textContent=t==='dark'?'☀ Light mode':'☾ Dark mode';$('#handBtn').textContent=h==='left'?'Right-handed':'Left-handed'}
+$('#themeBtn').onclick=()=>{S.ui=S.ui||{};S.ui.theme=(S.ui.theme||'dark')==='dark'?'light':'dark';applyUi();save()};
+$('#handBtn').onclick=()=>{S.ui=S.ui||{};S.ui.hand=S.ui.hand==='left'?'right':'left';applyUi();save();toast(S.ui.hand==='left'?'Left-handed layout':'Right-handed layout')};
 function renderOther(){
-  const q=$('#otherQ').value.trim().toLowerCase(), pr=new Set((PRESETS[S.preset]||PRESETS.west).list.map(s=>s.c));
-  const l=allSpecies().filter(s=>!pr.has(s.c)&&(!q||s.c.toLowerCase().includes(q)||s.s.toLowerCase().includes(q)));
-  $('#otherList').innerHTML=l.map(s=>`<button class="btn sp" data-c="${esc(s.c)}" aria-pressed="${S.cur.sp&&S.cur.sp.c===s.c}"><span class="n">${esc(s.c)}</span><span class="s">${esc(s.s)}</span></button>`).join('')||'<span class="muted small">No match. Use "Unidentified fish" and add a comment.</span>';
+  const q=$('#otherQ').value.trim().toLowerCase(),cur=S.cur.sp&&S.cur.sp.c;
+  const hit=s=>!q||s.c.toLowerCase().includes(q)||s.s.toLowerCase().includes(q);
+  const b=s=>`<button class="btn sp osp${s.teps?' tepsp':''}" data-c="${esc(s.c)}" aria-pressed="${cur===s.c}"><span class="n">${s.s?`<i>${esc(s.s)}</i>`:esc(s.c)}</span><span class="s">${s.s?esc(s.c):'&nbsp;'}</span></button>`;
+  const pin=PINNED.filter(hit),l=otherFor(S.preset).filter(hit);
+  $('#otherList').innerHTML=(pin.length?`<div class="ohead">Unidentified and TEPS</div>${pin.map(b).join('')}`:'')+
+    (l.length?`<div class="ohead">A–Z by scientific name</div>${l.map(b).join('')}`:'')||
+    '<span class="muted small">No match. Use "Unidentified fish" and add a comment.</span>';
 }
 function renderUnit(){
   const st=active(),m=st?st.h.method:'Trap';
   $('#unitLbl').textContent=unitLabel(); $('#unitVal').textContent=S.cur.unit;
   $('#emptyBtn').textContent='Empty '+unitLabel().toLowerCase(); $('#recUnitTh').textContent=unitLabel();
   const pb=$('#posBtn'),p=st&&st.pos&&st.pos[S.cur.unit];
-  if(p&&p.lat!==''&&p.lat!=null){pb.textContent=`${unitLabel()} ${S.cur.unit}  ${fmtDM(p.lat,true)}  ${fmtDM(p.lon,false)}`;pb.className='btn posbtn'}
-  else{pb.textContent=`${unitLabel()} ${S.cur.unit}: no position. Tap to add`;pb.className='btn posbtn missing'}
+  const tio=p&&(p.tin||p.tout)?`  ·  in ${hmOf(p.tin)||'—'}  out ${hmOf(p.tout)||'—'}`:'';
+  if(p&&p.lat!==''&&p.lat!=null){pb.textContent=`${unitLabel()} ${S.cur.unit}  ${fmtDM(p.lat,true)}  ${fmtDM(p.lon,false)}${tio}`;pb.className='btn posbtn'}
+  else{pb.textContent=`${unitLabel()} ${S.cur.unit}: no position${tio}. Tap to add`;pb.className='btn posbtn missing'}
   const dl=m==='Dropline'; $('#hookRow').hidden=!dl;
   if(dl)$('#hooks').innerHTML=Array.from({length:10},(_,i)=>`<button class="btn" data-h="${i+1}" aria-pressed="${S.cur.hook===i+1}">${i+1}</button>`).join('');
 }
 function renderLen(){
-  const c=S.cur;$('#lenVal').textContent=c.len===''?'—':c.len;
+  const c=S.cur;$('.lendisp').classList.toggle('has',c.len!=='');$('#lenVal').textContent=c.len===''?'—':c.len;
   $('#curSp').innerHTML=c.sp?`${esc(c.sp.c)} <i>${esc(c.sp.s)}</i>`:'Pick a species';
 }
 function renderAttrs(){
@@ -494,7 +712,12 @@ function rowHTML(r,showHook){
     `<td>${fateHTML(r)}</td><td>${r.dep==='N'?'—':`<span class="tag dep">${r.dep==='P'?'Partial':'Whole'}</span>`}</td><td class="mono">${esc(sampList(r))||'—'}</td><td class="mono">${hhmm(r.ts)}</td></tr>`;
 }
 function renderRecent(){
-  const st=active();if(!st){$('#recentBody').innerHTML='';return}
+  const st=active(),lf=$('#lastFish');
+  const last=st?stRecs(st.id).filter(r=>!r.empty).slice(-1)[0]:null;
+  if(last){lf.hidden=false;const fz={RET:'RET',BT:'BT',DIS:'DIS'}[last.fate]||last.fate;
+    lf.innerHTML=`Last: #${last.seq} ${esc(last.species)} <b>${last.fl_mm===''?'no length':last.fl_mm+' mm'}</b> ${esc(last.sex)} · ${fz}${last.dr?' '+last.dr:''}${last.rc?' '+last.rc:''}${sampList(last)?' · '+esc(sampList(last)):''}`}
+  else lf.hidden=true;
+  if(!st){$('#recentBody').innerHTML='';return}
   const rs=stRecs(st.id),dl=st.h.method==='Dropline';
   $('#recentBody').innerHTML=rs.slice(-10).reverse().map(r=>rowHTML(r,dl)).join('')||`<tr class="empty"><td colspan="9">No records yet. Pick a species, key the length, tap Enter.</td></tr>`;
   $('#recentCount').textContent=`${rs.length} records in this station`;
@@ -521,7 +744,7 @@ function commit(){
   if((c.fate==='DIS'||c.teps)&&!c.rc){warn('Pick a release condition (AU, AI, DD or UN).');return}
   if(c.teps&&!c.cmt.trim()){warn('Describe the TEPS interaction in the comment box.');$('#cmt').focus();return}
   const dr=c.fate==='DIS'&&!c.teps?c.dr:'',rc=(c.fate==='DIS'||c.teps)?c.rc:'';
-  if(len!==''&&!c.ack&&(len<40||len>c.sp.max)){warn(`${len} mm is outside the expected range for ${c.sp.c} (40–${c.sp.max} mm). Tap again to confirm.`,true);return}
+  if(len!==''&&!c.ack&&(len<MIN_FL||len>c.sp.max)){warn(`${len} mm is outside the expected range for ${c.sp.c} (${MIN_FL}–${c.sp.max} mm). Tap again to confirm.`,true);return}
   const f=liveFix();
   if(c.editId){
     const r=S.records.find(x=>x.id===c.editId);if(!r){resetFish();renderEntry();return}
@@ -648,19 +871,24 @@ function parseCoord(v,isLat){
   let sign;if(/[SW]/.test(s)||/^\s*-/.test(s))sign=-1;else if(/[NE]/.test(s)||/^\s*\+/.test(s))sign=1;else sign=isLat?-1:1;
   const d=nums[0]+(nums[1]||0)/60+(nums[2]||0)/3600;
   if(d>(isLat?90:180))return NaN;return +(sign*d).toFixed(6)}
-function setPos(st,u,lat,lon,src,t){st.pos=st.pos||{};st.pos[u]={lat,lon,src,t:t||''}}
+function setPos(st,u,lat,lon,src,t){st.pos=st.pos||{};const o=st.pos[u]||{};st.pos[u]=Object.assign(o,{lat,lon,src,t:t||''})}
+/* Trap time in (deployed) / time out (hauled). Stored as ISO; typed times use the survey date. */
+const hmOf=iso=>{if(!iso)return '';const d=new Date(iso);return isNaN(d)?'':z(d.getHours())+':'+z(d.getMinutes())};
+function isoFromHM(date,hm){if(!hm)return '';const d=new Date((date||new Date().toISOString().slice(0,10))+'T'+hm+':00');return isNaN(d)?'':d.toISOString()}
+function unitSoak(p){if(!p||!p.tin||!p.tout)return '';let m=(new Date(p.tout)-new Date(p.tin))/60000;if(!isFinite(m))return '';if(m<0)m+=1440;return Math.round(m)}
 
 function viewPositions(){
   const st=active();if(!st){other.innerHTML='<h2>Positions</h2><p class="note">No active station.</p>';return}
   st.pos=st.pos||{};const L=unitLabel(),units=unitList(st),done=units.filter(u=>hasPos(st.pos[u])).length;
   other.innerHTML=`<h2>${L} positions · Set ${esc(st.h.stationNo)} · Line ${esc(st.h.lineNo)}</h2>
-  <p class="note">Type a position as degrees and minutes like the plotter (19 24.391) or decimal degrees (-19.40652). Latitude is taken as South and longitude as East unless you add N or W. <b>Stamp GPS</b> takes the iPad's current fix, which comes from a Garmin GLO if one is paired.</p>
-  <div class="tally"><span><b>${done}</b> of ${units.length} ${L.toLowerCase()}s positioned</span><span>GPS: ${liveFix()?'±'+liveFix().acc+' m':'no fix'}</span></div>
-  <div class="panel"><div class="tblwrap"><table><thead><tr><th>${L}</th><th>Latitude</th><th>Longitude</th><th>Time</th><th>Source</th><th></th></tr></thead><tbody id="posBody">
+  <p class="note"><b>In now</b> and <b>Out now</b> stamp the time each ${L.toLowerCase()} goes in and comes out (tap the time to correct it). In now also takes the GPS position if the ${L.toLowerCase()} has none yet. Type a position as degrees and minutes like the plotter (19 24.391) or decimal degrees (-19.40652). Latitude is taken as South and longitude as East unless you add N or W. <b>Stamp GPS</b> takes the iPad's current fix, which comes from a Garmin GLO if one is paired.</p>
+  <div class="tally"><span><b>${done}</b> of ${units.length} ${L.toLowerCase()}s positioned</span><span><b>${units.filter(u=>(st.pos[u]||{}).tin).length}</b> in · <b>${units.filter(u=>(st.pos[u]||{}).tout).length}</b> out</span><span>GPS: ${liveFix()?'±'+liveFix().acc+' m':'no fix'}</span></div>
+  <div class="panel"><div class="tblwrap"><table><thead><tr><th>${L}</th><th>Latitude</th><th>Longitude</th><th>Time in</th><th>Time out</th><th>Soak min</th><th>Source</th><th></th></tr></thead><tbody id="posBody">
   ${units.map(u=>{const p=st.pos[u]||{};return `<tr data-u="${u}" class="${posFocus===u?'sel':''}"><td class="mono">${u}</td>
    <td><input class="pin" id="plat_${u}" data-u="${u}" data-k="lat" value="${esc(fmtDM(p.lat,true))}" placeholder="deg min.mmm" autocomplete="off" autocapitalize="characters" aria-label="${L} ${u} latitude"></td>
    <td><input class="pin" id="plon_${u}" data-u="${u}" data-k="lon" value="${esc(fmtDM(p.lon,false))}" placeholder="deg min.mmm" autocomplete="off" autocapitalize="characters" aria-label="${L} ${u} longitude"></td>
-   <td class="mono" id="pt_${u}">${p.t?hhmm(p.t):'—'}</td><td id="ps_${u}">${esc(p.src||'')}</td>
+   ${['tin','tout'].map(k=>`<td><div class="tio"><input type="time" class="tin" id="${k}_${u}" data-u="${u}" data-k="${k}" value="${hmOf(p[k])}" aria-label="${L} ${u} time ${k==='tin'?'in':'out'}"><button class="btn nowbtn${p[k]?'':' due'}" data-now-u="${u}" data-k="${k}">${k==='tin'?'In':'Out'} now</button></div></td>`).join('')}
+   <td class="mono" id="psk_${u}">${unitSoak(p)}</td><td id="ps_${u}">${esc(p.src||'')}</td>
    <td><button class="btn stampbtn" data-stamp-u="${u}">Stamp GPS</button></td></tr>`}).join('')}
   </tbody></table></div>
   <div class="actions"><button class="btn" id="addUnit">Add ${L.toLowerCase()}</button></div></div>
@@ -681,6 +909,13 @@ function viewPositions(){
   other.querySelectorAll('[data-stamp-u]').forEach(b=>b.onclick=()=>{const u=+b.dataset.stampU,f=liveFix();
     if(!f){toast('No GPS fix. Type the position from the plotter');return}
     setPos(st,u,f.lat,f.lon,`GPS ±${f.acc} m`,new Date().toISOString());save();posFocus=u;viewPositions();toast(`${L} ${u} position stamped`)});
+  other.querySelectorAll('[data-now-u]').forEach(b=>b.onclick=()=>{const u=+b.dataset.nowU,k=b.dataset.k,p=st.pos[u]||{lat:'',lon:'',t:'',src:''};
+    p[k]=new Date().toISOString();let extra='';
+    if(k==='tin'&&!hasPos(p)){const f=liveFix();if(f){p.lat=f.lat;p.lon=f.lon;p.src=`GPS ±${f.acc} m`;p.t=p[k];extra=' + position'}}
+    st.pos[u]=p;save();posFocus=u;viewPositions();toast(`${L} ${u} ${k==='tin'?'in':'out'} ${hmOf(p[k])}${extra}`)});
+  other.querySelectorAll('.tin').forEach(inp=>inp.onchange=()=>{const u=+inp.dataset.u,k=inp.dataset.k,p=st.pos[u]||{lat:'',lon:'',t:'',src:''};
+    p[k]=isoFromHM(st.h.date,inp.value);st.pos[u]=p;save();$('#psk_'+u).textContent=unitSoak(p);
+    const nb=other.querySelector(`[data-now-u="${u}"][data-k="${k}"]`);if(nb)nb.classList.toggle('due',!p[k])});
   $('#addUnit').onclick=()=>{const u=(units.length?Math.max(...units):0)+1;st.pos[u]={lat:'',lon:'',t:'',src:''};posFocus=u;save();viewPositions()};
   $('#posBack').onclick=()=>show('entry');
   $('#impFile').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const rd=new FileReader();
@@ -737,8 +972,8 @@ function fieldHTML(f,h){
 }
 function viewHeader(isNew){
   const st=active(),h=isNew?isNew:(st?st.h:defaultHeader());
-  other.innerHTML=`<h2>${isNew?'Add station(s)':'Station header'}</h2>
-  ${isNew?`<div class="panel"><div class="form"><div class="field"><label for="h_batch">Stations to create</label><input id="h_batch" type="number" inputmode="numeric" min="1" max="30" value="1"></div>
+  other.innerHTML=`<h2>${isNew?'Add Survey':'Station header'}</h2>
+  ${isNew?`<div class="panel"><div class="form"><div class="field"><label for="h_batch">Surveys to create</label><input id="h_batch" type="number" inputmode="numeric" min="1" max="30" value="1"></div>
    <p class="note" style="grid-column:span 2;align-self:end">Creates consecutive station numbers that share these details. Edit depth or position on each one later if they differ.</p></div></div>`:''}
   <div class="panel"><div class="form">${HF.map(f=>fieldHTML(f,h)).join('')}</div></div>
   <div class="panel"><span class="lbl">Set and haul (time + position)</span>
@@ -763,7 +998,7 @@ function viewHeader(isNew){
       const n=Math.min(30,Math.max(1,parseInt($('#h_batch').value,10)||1));let first=null;
       for(let i=0;i<n;i++){const h2=Object.assign({},nh);if(h2.stationNo!=='')h2.stationNo=+nh.stationNo+i;if(autoOp)h2.opnum=makeOpnum(h2);
         const ns={id:uid(),h:h2,created:new Date().toISOString(),seq:0};S.stations.push(ns);if(!first)first=ns}
-      activate(first.id);S.cur.hook=1;save();toast(n===1?'Station added':`${n} stations added`);show('stations')}
+      activate(first.id);S.cur.hook=1;save();toast(n===1?'Survey added':`${n} surveys added`);show('stations')}
     else{st.h=nh;save();toast('Header saved');show('stations')}
   };
   $('#hCancel').onclick=()=>show('stations');
@@ -776,10 +1011,10 @@ function activate(id){S.active=id;const st=active();const rs=stRecs(id);const la
 function viewStations(){
   const st=active();
   const sorted=S.stations.slice().sort((a,b)=>String(b.h.date).localeCompare(String(a.h.date))||(+a.h.dayNo||0)-(+b.h.dayNo||0)||(+a.h.stationNo||0)-(+b.h.stationNo||0));
-  other.innerHTML=`<h2>Stations</h2>
+  other.innerHTML=`<h2>Survey</h2>
   <p class="note">Set up the day's stations here before you start, then tap <b>Enter data</b> on a station when it comes aboard. Tap a row to select it for editing.</p>
   <div class="actions">
-    <button class="btn primary" id="newSt">Add station(s)</button>
+    <button class="btn primary" id="newSt">Add Survey</button>
     <button class="btn" id="editSt"${st?'':' disabled'}>Edit header</button>
     <button class="btn" id="doneSt"${st?'':' disabled'}>${st&&st.done?'Reopen station':'Mark complete'}</button>
     <button class="btn danger" id="delSt"${st&&!stRecs(st.id).length?'':' hidden'}>Delete empty station</button>
@@ -787,34 +1022,35 @@ function viewStations(){
   <div class="panel"><div class="tblwrap"><table><thead><tr><th></th><th>Status</th><th>Date</th><th>Day</th><th>Stn</th><th>Method</th><th>OPNUM</th><th>Location</th><th>Depth m</th><th>Pos.</th><th>Fish</th><th>Ret.</th><th>Soak</th><th></th></tr></thead>
   <tbody>${sorted.map(s=>{const rs=stRecs(s.id),f=rs.filter(r=>!r.empty),[lab,cls]=status(s);
     return `<tr data-st="${s.id}" class="${s.id===S.active?'sel':''}"><td>${s.id===S.active?'●':''}</td><td><span class="stat ${cls}">${lab}</span></td><td class="mono">${esc(s.h.date)}</td><td class="mono">${esc(s.h.dayNo)}</td><td class="mono">${esc(s.h.stationNo)}</td><td>${esc(s.h.method)}</td><td class="mono">${esc(s.h.opnum)}</td><td>${esc(s.h.location)}</td><td class="mono">${esc(s.h.depth!=null?s.h.depth:s.h.depthMin)}</td><td class="mono">${(()=>{const us=unitList(s);return us.filter(u=>hasPos((s.pos||{})[u])).length+'/'+us.length})()}</td><td class="mono">${f.length}</td><td class="mono">${f.filter(r=>isRet(r)).length}</td><td class="mono">${soak(s.h)}</td>
-    <td><button class="btn go" data-go="${s.id}">Enter data</button></td></tr>`}).join('')||'<tr class="empty"><td colspan="13">No stations yet. Tap Add station(s).</td></tr>'}</tbody></table></div></div>`;
+    <td><button class="btn go" data-go="${s.id}">Enter data</button></td></tr>`}).join('')||'<tr class="empty"><td colspan="13">No surveys yet. Tap Add Survey.</td></tr>'}</tbody></table></div></div>`;
   other.querySelectorAll('tr[data-st]').forEach(tr=>tr.onclick=e=>{if(e.target.closest('[data-go]'))return;activate(tr.dataset.st);viewStations();renderTop()});
   other.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{activate(b.dataset.go);show('entry')});
   $('#newSt').onclick=()=>{const h=Object.assign({},st?st.h:defaultHeader());
     h.stationNo=Math.max(0,...S.stations.filter(s=>s.h.date===h.date&&String(s.h.dayNo)===String(h.dayNo)).map(s=>+s.h.stationNo||0))+1;
     STAMPS.forEach(s=>{h[s+'_time']='';h[s+'_lat']='';h[s+'_lon']=''});h.comment='';h.opnum='';h.moon='';viewHeader(h)};
   $('#editSt').onclick=()=>show('header');
-  $('#doneSt').onclick=()=>{st.done=!st.done;save();viewStations();if(st.done&&window.top===window.self){saveCsv('flat','active','backup')}else toast(st.done?'Station marked complete':'Station reopened')};
+  $('#doneSt').onclick=()=>{st.done=!st.done;save();viewStations();if(st.done)fullBackup(true);else toast('Station reopened')};
   const d=$('#delSt');if(d)d.onclick=e=>armed(e.target,'Tap again to delete',()=>{S.stations=S.stations.filter(x=>x.id!==st.id);S.active=S.stations.length?S.stations[0].id:null;save();viewStations();renderTop();toast('Station deleted')});
 }
 
 /* export */
 const q=v=>{v=v==null?'':String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
 const HKEYS=[...HFK.map(f=>f.k),'set_time','set_lat','set_lon','haul_time','haul_lat','haul_lon'];
-const RKEYS=['id','station','device','seq','ts','unit','hook','empty','species','sci','caab','fl_mm','sex','fate','dr','rc','teps','dep','oto','gon','fin','sto','ulat','ulon','lat','lon','comment','edited'];
-const RNAMES={id:'record_id',station:'station_id',seq:'record_no',ts:'timestamp',empty:'empty_unit',sci:'scientific_name',caab:'caab_code',dr:'discard_reason',rc:'release_condition',teps:'teps_interaction',dep:'depredation',oto:'otolith_id',gon:'gonad_id',fin:'finclip_id',sto:'stomach_id',comment:'comment_or_interaction',ulat:'unit_lat',ulon:'unit_lon',lat:'fish_gps_lat',lon:'fish_gps_lon'};
+const RKEYS=['id','station','device','seq','ts','tsl','unit','hook','empty','species','sci','caab','fl_mm','sex','fate','dr','rc','teps','dep','oto','gon','fin','sto','ulat','ulon','utin','utout','usoak','lat','lon','comment','edited'];
+const RNAMES={id:'record_id',station:'station_id',seq:'record_no',ts:'timestamp_utc',tsl:'time_local',empty:'empty_unit',sci:'scientific_name',caab:'caab_code',dr:'discard_reason',rc:'release_condition',teps:'teps_interaction',dep:'depredation',oto:'otolith_id',gon:'gonad_id',fin:'finclip_id',sto:'stomach_id',comment:'comment_or_interaction',ulat:'unit_lat',ulon:'unit_lon',utin:'unit_time_in',utout:'unit_time_out',usoak:'unit_soak_min',lat:'fish_gps_lat',lon:'fish_gps_lon'};
 function csv(kind,scope){
   const sts=scope==='all'?S.stations:S.stations.filter(s=>s.id===S.active),ids=new Set(sts.map(s=>s.id));
   const recs=S.records.filter(r=>ids.has(r.station));
   const hrow=st=>[st.id,S.device,...HKEYS.map(k=>st.h[k]),soak(st.h)];
   const hcols=['station_id','device',...HKEYS,'soak_min'];
-  const rrow=r=>{const st=S.stations.find(x=>x.id===r.station),p=st&&st.pos&&st.pos[r.unit];
-  return RKEYS.map(k=>k==='empty'||k==='teps'?(r[k]?'Y':'N'):k==='ulat'?(hasPos(p)?p.lat:''):k==='ulon'?(hasPos(p)?p.lon:''):r[k])};
+  const xlTime=iso=>{if(!iso)return '';const d=new Date(iso);return isNaN(d)?'':`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`};
+const rrow=r=>{const st=S.stations.find(x=>x.id===r.station),p=st&&st.pos&&st.pos[r.unit];
+  return RKEYS.map(k=>k==='empty'||k==='teps'?(r[k]?'Y':'N'):k==='tsl'?xlTime(r.ts):k==='ulat'?(hasPos(p)?p.lat:''):k==='ulon'?(hasPos(p)?p.lon:''):k==='utin'?xlTime(p&&p.tin):k==='utout'?xlTime(p&&p.tout):k==='usoak'?unitSoak(p):r[k])};
   const rcols=RKEYS.map(k=>RNAMES[k]||k);
   let rows;
   if(kind==='stations')rows=[hcols,...sts.map(hrow)];
-  else if(kind==='positions'){rows=[['station_id','device','opnum','date','line','set','method','unit','lat','lon','lat_dm','lon_dm','time','source']];
-    sts.forEach(st=>unitList(st).forEach(u=>{const p=(st.pos||{})[u]||{};rows.push([st.id,S.device,st.h.opnum,st.h.date,st.h.lineNo,st.h.stationNo,st.h.method,u,hasPos(p)?p.lat:'',hasPos(p)?p.lon:'',fmtDM(p.lat,true),fmtDM(p.lon,false),p.t||'',p.src||''])}))}
+  else if(kind==='positions'){rows=[['station_id','device','opnum','date','line','set','method','unit','lat','lon','lat_dm','lon_dm','time','source','time_in','time_out','unit_soak_min']];
+    sts.forEach(st=>unitList(st).forEach(u=>{const p=(st.pos||{})[u]||{};rows.push([st.id,S.device,st.h.opnum,st.h.date,st.h.lineNo,st.h.stationNo,st.h.method,u,hasPos(p)?p.lat:'',hasPos(p)?p.lon:'',fmtDM(p.lat,true),fmtDM(p.lon,false),p.t||'',p.src||'',xlTime(p.tin),xlTime(p.tout),unitSoak(p)])}))}
   else if(kind==='fish')rows=[rcols,...recs.map(rrow)];
   else{const m=Object.fromEntries(sts.map(s=>[s.id,s]));rows=[[...hcols,rcols[0],...rcols.slice(3)],...recs.map(r=>{const rr=rrow(r);return [...hrow(m[r.station]),rr[0],...rr.slice(3)]})]}
   return rows.map(r=>r.map(q).join(',')).join('\n');
@@ -828,18 +1064,20 @@ function viewExport(){
   <div class="tabs">${[['active','Active station'],['all','All stations']].map(([k,l])=>`<button class="btn" data-sc="${k}" aria-pressed="${exScope===k}">${l}</button>`).join('')}</div>
   <p class="note">Flat repeats the station header on every fish, like the lobster export. Fish and Station tables link on <b>station_id</b> for joining in R. Every record carries a unique record_id and the device ID, so files from several iPads combine without duplicates.</p>
   <textarea class="csv" id="csvOut" readonly aria-label="CSV output">${esc(txt)}</textarea>
-  <div class="actions"><button class="btn primary" id="copyCsv">Copy CSV</button>${top?'<button class="btn" id="dlCsv">Save CSV file</button>':''}</div>
+  <div class="actions"><button class="btn primary" id="copyCsv">Copy CSV</button>${top?'<button class="btn" id="dlCsv">Save CSV file</button>':''}<button class="btn" id="fullBk">Full backup file</button></div>
+  <p class="note"><b>Full backup file</b> holds everything on this iPad (all stations, fish, positions, trap times, serials and settings) in one file. Send it to a second device with AirDrop, save it to a USB-C stick, or email it. Setup → Restore loads it onto any iPad.</p>
   ${top?'':'<p class="note">In this preview, use Copy. The installed version also saves the CSV to Files or shares it to Mail.</p>'}`;
   other.querySelectorAll('[data-ex]').forEach(b=>b.onclick=()=>{exKind=b.dataset.ex;viewExport()});
   other.querySelectorAll('[data-sc]').forEach(b=>b.onclick=()=>{exScope=b.dataset.sc;viewExport()});
   $('#copyCsv').onclick=()=>{const ta=$('#csvOut');const p=navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(ta.value):Promise.reject();
     p.then(()=>toast('CSV copied')).catch(()=>{ta.focus();ta.select();toast('Selected. Use the system Copy')})};
   if(top)$('#dlCsv').onclick=()=>saveCsv(exKind,exScope);
+  $('#fullBk').onclick=()=>fullBackup(false);
 }
 async function saveCsv(kind,scope,tag){
   const st=active(),txt=csv(kind,scope);
   const name=`catch_${tag?tag+'_':''}${kind}_${(st&&st.h.opnum)||(st&&st.h.date)||'data'}_${S.device}.csv`;
-  const blob=new Blob([txt],{type:'text/csv'});
+  const blob=new Blob(['\uFEFF'+txt],{type:'text/csv'});
   try{const file=new File([blob],name,{type:'text/csv'});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});toast(tag?'Station complete. Backup saved':'CSV shared');return}}
   catch(e){if(e&&e.name==='AbortError'){toast(tag?'Station complete. Backup skipped':'Cancelled');return}}
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
@@ -858,9 +1096,18 @@ function viewSetup(){
    <div class="form">${SAMPLES.map(([k,l])=>`<div class="field"><label for="s_${k}p">${l} prefix</label><input id="s_${k}p" value="${esc(S.serials[k].prefix)}"></div><div class="field"><label for="s_${k}n">${l} next no</label><input id="s_${k}n" type="number" inputmode="numeric" value="${S.serials[k].next}"></div>`).join('')}</div>
   </div>
   <div class="actions"><button class="btn primary" id="sSave">Save setup</button></div>
+  <p class="note">Catch Logger app version <b>${APP_VERSION}</b></p>
   <div class="panel"><span class="lbl">Data on this iPad</span>
    <p class="note">${S.records.length} records in ${S.stations.length} station(s). Export before clearing anything.</p>
-   <div class="actions"><button class="btn danger" id="clrEx">Clear example data</button><button class="btn danger" id="clrAll">Clear all data</button></div></div>`;
+   <p class="note" id="storeInfo">Checking storage…</p>
+   <div class="actions"><button class="btn primary" id="bkNow3">Full backup now</button><button class="btn danger" id="clrEx">Clear example data</button><button class="btn danger" id="clrAll">Clear all data</button></div></div>
+  <div class="panel restore"><span class="lbl">Restore from a backup file</span>
+   <p class="note">Use this to move data to another iPad or recover after a problem. Choose a <b>catchlogger_backup_….json</b> file from Files. You see what is in it before anything changes.</p>
+   <input type="file" id="rsFile" accept=".json,application/json" aria-label="Backup file">
+   <div id="rsOut"></div></div>`;
+  storeInfo();
+  $('#bkNow3').onclick=()=>fullBackup(false);
+  $('#rsFile').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>previewRestore(String(rd.result));rd.onerror=()=>toast('Could not read that file');rd.readAsText(f)};
   $('#sSave').onclick=()=>{S.device=$('#s_dev').value.trim()||S.device;S.preset=$('#s_pre').value;S.defFate=$('#s_fate').value;
     SAMPLES.forEach(([k])=>{S.serials[k].prefix=$('#s_'+k+'p').value.trim();S.serials[k].next=Math.max(1,parseInt($('#s_'+k+'n').value,10)||1)});
     save();renderTop();toast('Setup saved')};
@@ -876,11 +1123,40 @@ function viewSetup(){
     S.active=S.stations[0].id;S.serials=ser;S.cur.unit=1;resetFish();save();viewSetup();renderTop();toast('All data cleared')});
 }
 
+async function storeInfo(){const el=$('#storeInfo');if(!el)return;let used='',pers='unknown';
+  try{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();used=`${(e.usage/1e6).toFixed(1)} MB used of about ${Math.round(e.quota/1e6)} MB available`}}catch(e){}
+  try{if(navigator.storage&&navigator.storage.persisted)pers=(await navigator.storage.persisted())?'granted':'not granted (iOS may still keep it; back up regularly)'}catch(e){}
+  el.innerHTML=`${S.records.length} records in ${S.stations.length} station(s). Main store: <b>${db?(dbOk===false?'last save failed':'OK'):'unavailable'}</b> · Second copy: <b>${lsOk?'OK':'full (main store still saving)'}</b> · Permanent storage: ${pers}${used?' · '+used:''}.`}
+function previewRestore(txt){const out=$('#rsOut');let b;
+  try{b=JSON.parse(txt)}catch(e){out.innerHTML='<p class="warn">That file is not a Catch Logger backup (could not read it).</p>';return}
+  if(!b||b.app!=='catch-logger'||!b.state||!Array.isArray(b.state.records)||!Array.isArray(b.state.stations)){out.innerHTML='<p class="warn">That file is not a Catch Logger backup.</p>';return}
+  const B=b.state,haveR=new Set(S.records.map(r=>r.id)),haveS=new Set(S.stations.map(x=>x.id));
+  const newR=B.records.filter(r=>!haveR.has(r.id)).length,newS=B.stations.filter(x=>!haveS.has(x.id)).length;
+  out.innerHTML=`<p class="note">Backup from <b>${esc(b.device||'?')}</b>, saved ${esc((b.exportedAt||'').replace('T',' ').slice(0,16))} UTC: <b>${B.stations.length}</b> stations, <b>${B.records.length}</b> records. This iPad has ${S.stations.length} stations, ${S.records.length} records.</p>
+   <div class="actions"><button class="btn primary" id="rsMerge">Add missing (${newS} stations, ${newR} records)</button><button class="btn danger" id="rsReplace">Replace everything on this iPad</button></div>
+   <p class="note"><b>Add missing</b> keeps everything here and adds what is only in the backup. <b>Replace</b> makes this iPad an exact copy of the backup, including its Device ID and next sample serials, so it carries on where the other iPad left off. Make a backup of this iPad first if it holds anything you need.</p>`;
+  $('#rsMerge').onclick=()=>{const add=B.records.filter(r=>!haveR.has(r.id));S.records=S.records.concat(add).sort((x,y)=>String(x.ts).localeCompare(String(y.ts)));
+    B.stations.forEach(bs=>{const cur=S.stations.find(x=>x.id===bs.id);if(!cur){S.stations.push(bs);return}
+      cur.seq=Math.max(cur.seq||0,bs.seq||0);if(bs.pos){cur.pos=cur.pos||{};Object.keys(bs.pos).forEach(u=>{if(!cur.pos[u])cur.pos[u]=bs.pos[u];else['tin','tout'].forEach(k=>{if(!cur.pos[u][k]&&bs.pos[u][k])cur.pos[u][k]=bs.pos[u][k]})})}});
+    if(B.serials)SAMPLES.forEach(([k])=>{const a=S.serials[k],o=B.serials[k];if(o&&a&&o.prefix===a.prefix)a.next=Math.max(a.next,o.next)});
+    save();toast(`Added ${newS} stations and ${add.length} records`);show('stations')};
+  $('#rsReplace').onclick=e=>armed(e.target,'Tap again to replace all data',()=>{const ui=S.ui;S=fillDefaults(JSON.parse(JSON.stringify(B)));S.ui=ui||S.ui;
+    if(!S.stations.find(x=>x.id===S.active))S.active=S.stations.length?S.stations[0].id:null;applyUi();save();toast(`Restored ${S.records.length} records`);show('stations')});
+}
+$('#bkPill').onclick=()=>fullBackup(false);
+$('#bkNow2').onclick=()=>fullBackup(false);
+
 /* ---------- boot ---------- */
-S=load()||fresh();
-if(!S.cur)S.cur=fresh().cur;
 document.addEventListener('pointerdown',function wl(){try{navigator.wakeLock&&navigator.wakeLock.request('screen').catch(()=>{})}catch(e){}},{once:true});
-save();startGPS();renderGPS();show('stations');
+(async()=>{
+  db=await openDB();
+  const a=db?await idbLoad():null,b=load();
+  if(a){a.records.sort((x,y)=>String(x.ts).localeCompare(String(y.ts))||(x.seq||0)-(y.seq||0));a.records.forEach(r=>savedJson.set(r.id,JSON.stringify(r)))}
+  /* newest copy wins; the second copy stops updating once it is full, so the main store is normally newer */
+  let pick=a&&b?((a.savedAt||'')>=(b.savedAt||'')?a:b):(a||b);
+  S=pick?fillDefaults(pick):fresh();
+  applyUi();save();startGPS();renderGPS();show('stations');
+})();
 })();
 </script>
 <script>

@@ -1,5 +1,5 @@
-CATCH LOGGER - OFFLINE IPAD APP
-================================
+CATCH LOGGER - OFFLINE IPAD APP (version v8)
+============================================
 
 What is in this folder
   index.html             the app
@@ -56,7 +56,7 @@ STEP 3 - TEST BEFORE THE BOAT
 
 UPDATING THE APP LATER
 ----------------------
-1. Edit the files, then in sw.js change  catch-logger-v1  to  catch-logger-v2  (and so on).
+1. Edit the files, then in sw.js change  catch-logger-v8  to  catch-logger-v9  (and so on).
    If you skip this, iPads keep using the old copy.
 2. Upload the changed files to the same GitHub repository (Add file > Upload files).
 3. Each iPad gets the update the next time the app is opened with internet,
@@ -66,6 +66,14 @@ UPDATING THE APP LATER
 
 KEEPING DATA SAFE
 -----------------
-- Export after every station or at least every day (Mark complete does this for you).
-- Deleting the home-screen icon DELETES ALL DATA on that iPad. Export first.
-- Give each iPad its own Device ID and sample serial prefix (Setup).
+- Every fish is saved twice on the iPad the moment you tap Enter. If a save ever
+  fails, a red banner appears. Keep entering, tap "Back up now", then free up space.
+- The backup button in the top bar shows when you last backed up. It turns amber
+  after 300 records or 2 hours, red after 1,000 records or 4 hours. Tap it to back up.
+- Mark complete on a station saves a full backup file plus that station's CSV.
+- Send backups OFF the iPad: AirDrop to a phone or second iPad, Save to Files on a
+  USB-C stick, or email (sends when back in range).
+- To move data to another iPad: Setup > Restore from a backup file > choose the
+  catchlogger_backup_....json file. "Replace" makes it an exact copy, including the
+  Device ID and next sample serials.
+- Deleting the home-screen icon DELETES ALL DATA on that iPad. Back up first.

@@ -1,0 +1,42 @@
+UPDATING THE GITHUB BRANCH TO V8
+================================
+New in v8: the green button on the Survey page now reads "Add Survey".
+From v7 (data safety): every fish is now saved in two independent stores on
+the iPad (the main store holds hundreds of MB, so it no longer fills after ~3 days);
+a red banner if a save ever fails (entry is never blocked); a backup status button
+in the top bar (green / amber / red, tap it to back up); one-file Full backup and
+Restore (Setup); marking a station complete now saves the full backup plus that
+station's CSV. Existing data moves into the new store automatically the first
+time v7 opens. It replaces whatever version is on the branch now (v1 to v7). Survey data already on the iPads is kept.
+
+A. UPDATE THE BRANCH (on a computer)
+1. Unzip catch-logger-v8.zip.
+2. Open your repository on github.com (e.g. github.com/YOUR-USERNAME/catch-logger).
+   Check the branch selector above the file list says "main".
+3. Click "Add file" > "Upload files".
+4. Drag in ALL the files from the zip (not the folder). Same-named files are replaced.
+5. Under "Commit changes" type:  Release v8   then click "Commit changes".
+6. The file list should now show: index.html, sw.js, manifest.webmanifest,
+   icon-180.png, icon-192.png, icon-512.png, README.txt, UPDATE-BRANCH.txt.
+   If an old UPDATE-TO-V2.txt is there, open it > "..." menu > Delete file. (It is harmless.)
+7. Wait 1-2 minutes. Settings > Pages should show "Your site is live".
+8. Check: open  https://YOUR-USERNAME.github.io/catch-logger/sw.js  in a browser.
+   It must say  const VERSION = 'catch-logger-v8'.
+   Still showing an older number? Wait a few minutes and refresh; GitHub can lag.
+
+B. UPDATE EACH IPAD (with internet, after exporting today's data)
+9.  Open Catch Logger from the home-screen icon. Wait about 10 seconds.
+    It shows "Update downloaded. Close and reopen the app to use it."
+10. Swipe the app away completely, then open it again from the icon.
+11. Go to Setup. It should say "Catch Logger app version v8".
+    A backup button (e.g. "Not backed up") now sits in the top bar. Tap it once to make the first v7 backup.
+12. Check your stations and fish records are still there.
+
+If an iPad is still on an old version after two online open/close cycles:
+    Export all stations, delete the home-screen icon, open the address in
+    Safari and Add to Home Screen again. Deleting the icon deletes the data on
+    that iPad, so export first.
+
+NEXT TIME
+    For any later change, edit the files and change catch-logger-v8 to
+    catch-logger-v9 in sw.js (and APP_VERSION in index.html), then repeat A and B.
