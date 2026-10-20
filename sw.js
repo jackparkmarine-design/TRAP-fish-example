@@ -1,7 +1,7 @@
 // Catch Logger offline worker. Each release changes VERSION, so iPads download the new copy
 // the next time the app is opened with internet. Files are always fetched fresh from the
 // website (cache: 'reload'), never from the iPad's web cache, so an update cannot pick up old files.
-const VERSION = 'catch-logger-v12';
+const VERSION = 'catch-logger-v13';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

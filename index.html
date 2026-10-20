@@ -126,10 +126,14 @@ main{overflow:auto;padding-inline:16px;padding-block:0 16px;min-height:0}
 .posbtn{min-height:40px;font-size:13.5px;font-weight:500;font-family:var(--f-mono);text-align:left;padding:4px 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .posbtn.missing{border-color:var(--warn);color:var(--warn);background:var(--warn-soft);font-family:var(--f-body);font-weight:600}
 .tio{display:flex;gap:4px;align-items:center}
-.tin{min-height:42px;width:124px;border:1px solid var(--line);border-radius:8px;background:var(--raised);padding:0 6px;font-family:var(--f-mono);font-size:14px}
-.nowbtn{min-height:42px;padding:0 10px;font-size:13.5px;white-space:nowrap}
+.tin{min-height:42px;width:104px;border:1px solid var(--line);border-radius:8px;background:var(--raised);padding:0 6px;font-family:var(--f-mono);font-size:14px}
+.nowbtn{min-height:42px;padding:0 8px;font-size:13px;white-space:nowrap}
 .nowbtn.due{border-color:var(--accent);color:var(--accent)}
-.pin{min-height:42px;width:100%;min-width:150px;border:1px solid var(--line);border-radius:8px;background:var(--raised);padding:0 10px;font-family:var(--f-mono);font-size:14px}
+.dpin{min-height:42px;width:66px;border:1px solid var(--line);border-radius:8px;background:var(--raised);padding:0 8px;font-family:var(--f-mono);font-size:14px}
+.gpscell{display:flex;flex-direction:column;gap:2px;align-items:flex-start}
+.psrc{font-size:11px;color:var(--muted);white-space:nowrap}
+.autotag{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--go);border:1px solid var(--go);border-radius:6px;padding:2px 5px}
+.pin{min-height:42px;width:100%;min-width:128px;border:1px solid var(--line);border-radius:8px;background:var(--raised);padding:0 10px;font-family:var(--f-mono);font-size:14px}
 .pin.bad{border-color:var(--danger);background:var(--danger-soft)}
 .stampbtn{min-height:42px;padding:0 12px;font-size:14px}
 .imprev{max-height:240px;overflow:auto}
@@ -353,7 +357,7 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
 
 <script>
 (function(){
-const APP_VERSION='v12';
+const APP_VERSION='v13';
 const LS_KEY='demersalCatchLogger.v2';
 const $=s=>document.querySelector(s);
 const esc=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -725,7 +729,7 @@ function renderUnit(){
   $('#unitLbl').textContent=unitLabel(); $('#unitVal').textContent=S.cur.unit;
   $('#emptyBtn').textContent='Empty '+unitLabel().toLowerCase(); $('#recUnitTh').textContent=unitLabel();
   const pb=$('#posBtn'),p=st&&st.pos&&st.pos[S.cur.unit];
-  const tio=p&&(p.tin||p.tout)?`  ·  in ${hmOf(p.tin)||'—'}  out ${hmOf(p.tout)||'—'}`:'';
+  const tio=(p&&p.depth!==''&&p.depth!=null?`  ·  ${p.depth} m`:'')+(p&&(p.tin||p.tout)?`  ·  in ${hmOf(p.tin)||'—'}  out ${hmOf(p.tout)||'—'}`:'');
   if(p&&p.lat!==''&&p.lat!=null){pb.textContent=`${unitLabel()} ${S.cur.unit}  ${fmtDM(p.lat,true)}  ${fmtDM(p.lon,false)}${tio}`;pb.className='btn posbtn'}
   else{pb.textContent=`${unitLabel()} ${S.cur.unit}: no position${tio}. Tap to add`;pb.className='btn posbtn missing'}
   const dl=m==='Dropline'; $('#hookRow').hidden=!dl;
@@ -808,29 +812,39 @@ function commit(){
   const f=liveFix();
   if(c.editId){
     const r=S.records.find(x=>x.id===c.editId);if(!r){resetFish();renderEntry();return}
-    const voided=[];
+    const voided=[],oldU=r.unit;
     SAMPLES.forEach(([k])=>{if(c.samp[k]&&!r[k])r[k]=serialStr(S,k,S.serials[k].next++);else if(!c.samp[k]&&r[k]){voided.push(r[k]);r[k]=''}});
     Object.assign(r,{unit:c.unit,hook:st.h.method==='Dropline'?c.hook:'',species:c.sp.c,sci:c.sp.s,caab:c.sp.caab,fl_mm:len,sex:c.sex,fate:c.fate,dr,rc,teps:!!c.teps,dep:c.dep,comment:c.cmt,photos:(c.photos||[]).slice(),
       edited:new Date().toISOString()+(voided.length?` voided:${voided.join(' ')}`:'')});
+    if(+oldU!==+r.unit){syncAutoOut(st,oldU);syncAutoOut(st,r.unit)}
     save();resetFish();if(editFrom==='list'){editFrom=null;show('list')}else renderEntry();toast('Record #'+r.seq+' updated');return;
   }
   const r={id:uid(),station:st.id,device:S.device,seq:++st.seq,ts:new Date().toISOString(),unit:c.unit,hook:st.h.method==='Dropline'?c.hook:'',
     empty:false,species:c.sp.c,sci:c.sp.s,caab:c.sp.caab,fl_mm:len,sex:c.sex,fate:c.fate,dr,rc,teps:!!c.teps,dep:c.dep,oto:'',gon:'',fin:'',sto:'',
     lat:f?f.lat:'',lon:f?f.lon:'',comment:c.cmt,photos:(c.photos||[]).slice(),edited:''};
   SAMPLES.forEach(([k])=>{if(c.samp[k])r[k]=serialStr(S,k,S.serials[k].next++)});
-  S.records.push(r);save();
+  S.records.push(r);const ao=syncAutoOut(st,r.unit);save();
   const s=sampList(r);resetFish();renderEntry();
   const b=$('#enterBtn');b.classList.remove('flash');void b.offsetWidth;b.classList.add('flash');
-  toast(`#${r.seq} ${r.species} ${r.fl_mm===''?'no length':r.fl_mm+' mm'}${s?' · '+s:''}`);
+  toast(`#${r.seq} ${r.species} ${r.fl_mm===''?'no length':r.fl_mm+' mm'}${s?' · '+s:''}${ao?` · ${unitLabel()} ${r.unit} out ${hmOf(r.ts)}`:''}`);
 }
 function logEmpty(){
   const st=active();if(!st)return;const f=liveFix();
   S.records.push({id:uid(),station:st.id,device:S.device,seq:++st.seq,ts:new Date().toISOString(),unit:S.cur.unit,hook:'',empty:true,species:'EMPTY',sci:'',caab:'',
     fl_mm:'',sex:'',fate:'',dr:'',rc:'',teps:false,dep:'',oto:'',gon:'',fin:'',sto:'',lat:f?f.lat:'',lon:f?f.lon:'',comment:'',edited:''});
-  toast(`${unitLabel()} ${S.cur.unit} logged empty`);S.cur.unit++;save();renderEntry();
+  const ao=syncAutoOut(st,S.cur.unit);
+  toast(`${unitLabel()} ${S.cur.unit} logged empty${ao?` · out ${hmOf(new Date().toISOString())}`:''}`);S.cur.unit++;save();renderEntry();
 }
+/* Time out per trap: the first record entered for a trap (fish or empty) stamps it automatically.
+   A time typed in or stamped with "Out now" is never overwritten. If the records that set an automatic
+   time are deleted, it moves to the earliest remaining record, or clears if the trap has none. */
+function syncAutoOut(st,u){if(!st)return false;st.pos=st.pos||{};const p=st.pos[u];
+  if(p&&p.tout&&!p.toutAuto)return false;
+  const ts=S.records.filter(r=>r.station===st.id&&+r.unit===+u).map(r=>r.ts).sort()[0];
+  if(!ts){if(p&&p.toutAuto){p.tout='';p.toutAuto=false}return false}
+  const q=p||(st.pos[u]={lat:'',lon:'',t:'',src:''}),was=q.tout;q.tout=ts;q.toutAuto=true;return !was}
 function rollback(r){SAMPLES.forEach(([k])=>{if(r[k]&&r[k]===serialStr(S,k,S.serials[k].next-1))S.serials[k].next--})}
-function removeRec(r){rollback(r);if(r.photos&&r.photos.length)photoDel(r.photos);S.records=S.records.filter(x=>x.id!==r.id)}
+function removeRec(r){rollback(r);if(r.photos&&r.photos.length)photoDel(r.photos);S.records=S.records.filter(x=>x.id!==r.id);syncAutoOut(S.stations.find(x=>x.id===r.station),r.unit)}
 
 /* two-tap confirm */
 function armed(btn,label,fn){
@@ -962,15 +976,16 @@ function viewPositions(){
   const st=active();if(!st){other.innerHTML='<h2>Positions</h2><p class="note">No active station.</p>';return}
   st.pos=st.pos||{};const L=unitLabel(),units=unitList(st),done=units.filter(u=>hasPos(st.pos[u])).length;
   other.innerHTML=`<h2>${L} positions · Set ${esc(st.h.stationNo)} · Line ${esc(st.h.lineNo)}</h2>
-  <p class="note"><b>In now</b> and <b>Out now</b> stamp the time each ${L.toLowerCase()} goes in and comes out (tap the time to correct it). In now also takes the GPS position if the ${L.toLowerCase()} has none yet. Type a position as degrees and minutes like the plotter (19 24.391) or decimal degrees (-19.40652). Latitude is taken as South and longitude as East unless you add N or W. <b>Stamp GPS</b> takes the iPad's current fix, which comes from a Garmin GLO if one is paired.</p>
+  <p class="note"><b>In now</b> and <b>Out now</b> stamp the time each ${L.toLowerCase()} goes in and comes out (tap the time to correct it). <b>Time out fills itself in</b> when the first fish or Empty ${L.toLowerCase()} is entered for a ${L.toLowerCase()}, marked AUTO; a time you set yourself is never changed. In now also takes the GPS position if the ${L.toLowerCase()} has none yet. Type a position as degrees and minutes like the plotter (19 24.391) or decimal degrees (-19.40652). Latitude is taken as South and longitude as East unless you add N or W. <b>Stamp GPS</b> takes the iPad's current fix, which comes from a Garmin GLO if one is paired.</p>
   <div class="tally"><span><b>${done}</b> of ${units.length} ${L.toLowerCase()}s positioned</span><span><b>${units.filter(u=>(st.pos[u]||{}).tin).length}</b> in · <b>${units.filter(u=>(st.pos[u]||{}).tout).length}</b> out</span><span>GPS: ${liveFix()?'±'+liveFix().acc+' m':'no fix'}</span></div>
-  <div class="panel"><div class="tblwrap"><table><thead><tr><th>${L}</th><th>Latitude</th><th>Longitude</th><th>Time in</th><th>Time out</th><th>Soak min</th><th>Source</th><th></th></tr></thead><tbody id="posBody">
+  <div class="panel"><div class="tblwrap"><table><thead><tr><th>${L}</th><th>Latitude</th><th>Longitude</th><th>Depth m</th><th>Time in</th><th>Time out</th><th>Soak</th><th>Position</th></tr></thead><tbody id="posBody">
   ${units.map(u=>{const p=st.pos[u]||{};return `<tr data-u="${u}" class="${posFocus===u?'sel':''}"><td class="mono">${u}</td>
    <td><input class="pin" id="plat_${u}" data-u="${u}" data-k="lat" value="${esc(fmtDM(p.lat,true))}" placeholder="deg min.mmm" autocomplete="off" autocapitalize="characters" aria-label="${L} ${u} latitude"></td>
    <td><input class="pin" id="plon_${u}" data-u="${u}" data-k="lon" value="${esc(fmtDM(p.lon,false))}" placeholder="deg min.mmm" autocomplete="off" autocapitalize="characters" aria-label="${L} ${u} longitude"></td>
-   ${['tin','tout'].map(k=>`<td><div class="tio"><input type="time" class="tin" id="${k}_${u}" data-u="${u}" data-k="${k}" value="${hmOf(p[k])}" aria-label="${L} ${u} time ${k==='tin'?'in':'out'}"><button class="btn nowbtn${p[k]?'':' due'}" data-now-u="${u}" data-k="${k}">${k==='tin'?'In':'Out'} now</button></div></td>`).join('')}
-   <td class="mono" id="psk_${u}">${unitSoak(p)}</td><td id="ps_${u}">${esc(p.src||'')}</td>
-   <td><button class="btn stampbtn" data-stamp-u="${u}">Stamp GPS</button></td></tr>`}).join('')}
+   <td><input class="dpin" type="number" inputmode="decimal" step="any" id="pdep_${u}" data-u="${u}" value="${p.depth==null?'':esc(p.depth)}" placeholder="m" aria-label="${L} ${u} depth in metres"></td>
+   ${['tin','tout'].map(k=>`<td><div class="tio"><input type="time" class="tin" id="${k}_${u}" data-u="${u}" data-k="${k}" value="${hmOf(p[k])}" aria-label="${L} ${u} time ${k==='tin'?'in':'out'}"><button class="btn nowbtn${p[k]?'':' due'}" data-now-u="${u}" data-k="${k}">${k==='tin'?'In':'Out'} now</button>${k==='tout'&&p.toutAuto&&p.tout?'<span class="autotag" title="Set by the first record entered for this trap">auto</span>':''}</div></td>`).join('')}
+   <td class="mono" id="psk_${u}">${unitSoak(p)}</td>
+   <td><div class="gpscell"><button class="btn stampbtn" data-stamp-u="${u}">Stamp GPS</button><span class="psrc" id="ps_${u}">${esc(p.src||'')}</span></div></td></tr>`}).join('')}
   </tbody></table></div>
   <div class="actions"><button class="btn" id="addUnit">Add ${L.toLowerCase()}</button></div></div>
   <div class="panel"><span class="lbl">Import from plotter (TimeZero, Garmin)</span>
@@ -990,12 +1005,15 @@ function viewPositions(){
   other.querySelectorAll('[data-stamp-u]').forEach(b=>b.onclick=()=>{const u=+b.dataset.stampU,f=liveFix();
     if(!f){toast('No GPS fix. Type the position from the plotter');return}
     setPos(st,u,f.lat,f.lon,`GPS ±${f.acc} m`,new Date().toISOString());save();posFocus=u;viewPositions();toast(`${L} ${u} position stamped`)});
+  other.querySelectorAll('.dpin').forEach(inp=>inp.onchange=()=>{const u=+inp.dataset.u,p=st.pos[u]||(st.pos[u]={lat:'',lon:'',t:'',src:''});
+    const v=inp.value.trim();p.depth=v===''?'':+(+v).toFixed(1);save();if(v!=='')toast(`${L} ${u} depth ${p.depth} m`)});
   other.querySelectorAll('[data-now-u]').forEach(b=>b.onclick=()=>{const u=+b.dataset.nowU,k=b.dataset.k,p=st.pos[u]||{lat:'',lon:'',t:'',src:''};
-    p[k]=new Date().toISOString();let extra='';
+    p[k]=new Date().toISOString();if(k==='tout')p.toutAuto=false;let extra='';
     if(k==='tin'&&!hasPos(p)){const f=liveFix();if(f){p.lat=f.lat;p.lon=f.lon;p.src=`GPS ±${f.acc} m`;p.t=p[k];extra=' + position'}}
     st.pos[u]=p;save();posFocus=u;viewPositions();toast(`${L} ${u} ${k==='tin'?'in':'out'} ${hmOf(p[k])}${extra}`)});
   other.querySelectorAll('.tin').forEach(inp=>inp.onchange=()=>{const u=+inp.dataset.u,k=inp.dataset.k,p=st.pos[u]||{lat:'',lon:'',t:'',src:''};
-    p[k]=isoFromHM(st.h.date,inp.value);st.pos[u]=p;save();$('#psk_'+u).textContent=unitSoak(p);
+    p[k]=isoFromHM(st.h.date,inp.value);if(k==='tout')p.toutAuto=false;st.pos[u]=p;save();
+    {const tg=inp.parentElement.querySelector('.autotag');if(tg&&k==='tout')tg.remove()}$('#psk_'+u).textContent=unitSoak(p);
     const nb=other.querySelector(`[data-now-u="${u}"][data-k="${k}"]`);if(nb)nb.classList.toggle('due',!p[k])});
   $('#addUnit').onclick=()=>{const u=(units.length?Math.max(...units):0)+1;st.pos[u]={lat:'',lon:'',t:'',src:''};posFocus=u;save();viewPositions()};
   $('#posBack').onclick=()=>show('entry');
@@ -1117,8 +1135,8 @@ function viewStations(){
 /* export */
 const q=v=>{v=v==null?'':String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
 const HKEYS=[...HFK.map(f=>f.k),'set_time','set_lat','set_lon','haul_time','haul_lat','haul_lon'];
-const RKEYS=['id','station','device','seq','ts','tsl','unit','hook','empty','species','sci','caab','fl_mm','sex','fate','dr','rc','teps','dep','oto','gon','fin','sto','ulat','ulon','utin','utout','usoak','lat','lon','photos','comment','edited'];
-const RNAMES={id:'record_id',station:'station_id',seq:'record_no',ts:'timestamp_utc',tsl:'time_local',empty:'empty_unit',sci:'scientific_name',caab:'caab_code',dr:'discard_reason',rc:'release_condition',teps:'teps_interaction',dep:'depredation',oto:'otolith_id',gon:'gonad_id',fin:'finclip_id',sto:'stomach_id',comment:'comment_or_interaction',ulat:'unit_lat',ulon:'unit_lon',utin:'unit_time_in',utout:'unit_time_out',usoak:'unit_soak_min',photos:'photo_files',lat:'fish_gps_lat',lon:'fish_gps_lon'};
+const RKEYS=['id','station','device','seq','ts','tsl','unit','hook','empty','species','sci','caab','fl_mm','sex','fate','dr','rc','teps','dep','oto','gon','fin','sto','ulat','ulon','udep','utin','utout','usoak','lat','lon','photos','comment','edited'];
+const RNAMES={id:'record_id',station:'station_id',seq:'record_no',ts:'timestamp_utc',tsl:'time_local',empty:'empty_unit',sci:'scientific_name',caab:'caab_code',dr:'discard_reason',rc:'release_condition',teps:'teps_interaction',dep:'depredation',oto:'otolith_id',gon:'gonad_id',fin:'finclip_id',sto:'stomach_id',comment:'comment_or_interaction',ulat:'unit_lat',ulon:'unit_lon',udep:'unit_depth_m',utin:'unit_time_in',utout:'unit_time_out',usoak:'unit_soak_min',photos:'photo_files',lat:'fish_gps_lat',lon:'fish_gps_lon'};
 function csv(kind,scope){
   const sts=scope==='all'?S.stations:S.stations.filter(s=>s.id===S.active),ids=new Set(sts.map(s=>s.id));
   const recs=S.records.filter(r=>ids.has(r.station));
@@ -1126,12 +1144,12 @@ function csv(kind,scope){
   const hcols=['station_id','device',...HKEYS,'soak_min'];
   const xlTime=iso=>{if(!iso)return '';const d=new Date(iso);return isNaN(d)?'':`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`};
 const rrow=r=>{const st=S.stations.find(x=>x.id===r.station),p=st&&st.pos&&st.pos[r.unit];
-  return RKEYS.map(k=>k==='empty'||k==='teps'?(r[k]?'Y':'N'):k==='tsl'?xlTime(r.ts):k==='ulat'?(hasPos(p)?p.lat:''):k==='ulon'?(hasPos(p)?p.lon:''):k==='utin'?xlTime(p&&p.tin):k==='utout'?xlTime(p&&p.tout):k==='usoak'?unitSoak(p):k==='photos'?photoNames(r).join(' '):r[k])};
+  return RKEYS.map(k=>k==='empty'||k==='teps'?(r[k]?'Y':'N'):k==='tsl'?xlTime(r.ts):k==='ulat'?(hasPos(p)?p.lat:''):k==='ulon'?(hasPos(p)?p.lon:''):k==='udep'?(p&&p.depth!=null?p.depth:''):k==='utin'?xlTime(p&&p.tin):k==='utout'?xlTime(p&&p.tout):k==='usoak'?unitSoak(p):k==='photos'?photoNames(r).join(' '):r[k])};
   const rcols=RKEYS.map(k=>RNAMES[k]||k);
   let rows;
   if(kind==='stations')rows=[hcols,...sts.map(hrow)];
-  else if(kind==='positions'){rows=[['station_id','device','opnum','date','line','set','method','unit','lat','lon','lat_dm','lon_dm','time','source','time_in','time_out','unit_soak_min']];
-    sts.forEach(st=>unitList(st).forEach(u=>{const p=(st.pos||{})[u]||{};rows.push([st.id,S.device,st.h.opnum,st.h.date,st.h.lineNo,st.h.stationNo,st.h.method,u,hasPos(p)?p.lat:'',hasPos(p)?p.lon:'',fmtDM(p.lat,true),fmtDM(p.lon,false),p.t||'',p.src||'',xlTime(p.tin),xlTime(p.tout),unitSoak(p)])}))}
+  else if(kind==='positions'){rows=[['station_id','device','opnum','date','line','set','method','unit','lat','lon','lat_dm','lon_dm','time','source','time_in','time_out','unit_soak_min','depth_m','time_out_auto']];
+    sts.forEach(st=>unitList(st).forEach(u=>{const p=(st.pos||{})[u]||{};rows.push([st.id,S.device,st.h.opnum,st.h.date,st.h.lineNo,st.h.stationNo,st.h.method,u,hasPos(p)?p.lat:'',hasPos(p)?p.lon:'',fmtDM(p.lat,true),fmtDM(p.lon,false),p.t||'',p.src||'',xlTime(p.tin),xlTime(p.tout),unitSoak(p),p.depth==null?'':p.depth,p.tout?(p.toutAuto?'Y':'N'):''])}))}
   else if(kind==='fish')rows=[rcols,...recs.map(rrow)];
   else{const m=Object.fromEntries(sts.map(s=>[s.id,s]));rows=[[...hcols,rcols[0],...rcols.slice(3)],...recs.map(r=>{const rr=rrow(r);return [...hrow(m[r.station]),rr[0],...rr.slice(3)]})]}
   return rows.map(r=>r.map(q).join(',')).join('\n');
