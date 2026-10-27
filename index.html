@@ -205,6 +205,14 @@ main{overflow:auto;padding-inline:16px;padding-block:0 16px;min-height:0}
 .confirmrow td{background:var(--danger-soft)}
 .confirmbar{display:flex;gap:12px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
 .btn.danger.solid{background:var(--danger);color:var(--on-fam)}
+.lenclr{min-height:40px;padding:0 14px;font-size:15px;background:var(--amb);border-color:var(--amb);color:var(--on-fam);margin-right:auto;align-self:center}
+.lockbtn{min-height:42px;padding:0 14px;border-radius:8px;border:1px solid var(--go);background:var(--go-s);color:var(--go);font-weight:700;cursor:pointer;white-space:nowrap}
+.lockov{position:fixed;inset:0;z-index:50;background:rgba(5,12,16,.86);display:flex;align-items:center;justify-content:center;padding:16px;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.lockbox{display:flex;flex-direction:column;align-items:center;gap:10px;color:#e2ebef;text-align:center}
+.lockbox h3{margin:0;font-family:var(--f-display);font-size:30px}.lockbox p{margin:0;color:#8fa1ab}.lockicon{font-size:56px}
+.unlockbtn{position:relative;overflow:hidden;margin-top:14px;min-height:72px;min-width:300px;border-radius:999px;border:2px solid #3ab36a;background:#123220;color:#e2ebef;font:600 18px var(--f-body);touch-action:none}
+.ufill{position:absolute;left:0;top:0;bottom:0;width:0;background:#3ab36a;opacity:.55}
+.ulabel{position:relative}
 /* tables */
 .tblwrap{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:14px}
@@ -269,6 +277,7 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
       <button data-v="header">Header</button>
       <button data-v="export">Export</button>
       <button data-v="setup">Setup</button>
+      <button class="lockbtn" id="lockBtn" aria-label="Lock screen for cleaning">🔒 Lock</button>
     </nav>
   </header>
   <main id="main">
@@ -298,7 +307,7 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
         </div>
         <div class="lendisp">
           <div class="cursp" id="curSp">Pick a species</div>
-          <div class="len"><span id="lenVal">—</span><small>mm FL</small></div>
+          <div class="len"><button class="btn lenclr" id="lenClr" aria-label="Clear length">Clear</button><span id="lenVal">—</span><small>mm FL</small></div>
         </div>
         <div class="keypad" id="keypad"></div>
         <div class="group"><span class="lbl">Sex</span>
@@ -352,12 +361,15 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
     <section class="page" id="v-other" hidden></section>
   </main>
 </div>
+<div class="lockov" id="lockOv" hidden>
+  <div class="lockbox"><div class="lockicon">🔒</div><h3>Screen locked</h3><p>Wipe the screen. Taps are ignored.</p>
+  <button class="unlockbtn" id="unlockBtn" aria-label="Hold to unlock"><span class="ufill" id="uFill"></span><span class="ulabel">Hold here 1.5 s to unlock</span></button></div></div>
 <div class="modal" id="modal" hidden></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 (function(){
-const APP_VERSION='v13';
+const APP_VERSION='v14';
 const LS_KEY='demersalCatchLogger.v2';
 const $=s=>document.querySelector(s);
 const esc=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -864,12 +876,13 @@ function armedDeleteEmpty(r){toast('Empty records: delete from Full list');}
 /* ---------- events: entry ---------- */
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,tr[data-id]');if(!t)return;
-  if(t.matches('#nav button')){show(t.dataset.v);return}
+  if(t.matches('#nav button[data-v]')){show(t.dataset.v);return}
   if(view!=='entry')return;
   if(t.matches('#spgrid .sp')){pickSpecies((PRESETS[S.preset]||PRESETS.north).list[+t.dataset.i]);renderSpecies();renderLen();renderAttrs();save();return}
   if(t.matches('#otherList .sp')){pickSpecies(allSpecies().find(x=>x.c===t.dataset.c));otherOpen=false;renderSpecies();renderLen();renderAttrs();save();return}
   if(t.id==='tepsBtn'){const c=S.cur;c.teps=!c.teps;if(c.teps){c.fate='DIS';c.dr=''}renderAttrs();return}
   if(t.id==='otherBtn'){otherOpen=!otherOpen;renderSpecies();if(otherOpen)$('#otherQ').focus();return}
+  if(t.id==='lenClr'){key('CLR');return}
   if(t.matches('#keypad .btn')){key(t.dataset.k);return}
   if(t.id==='posBtn'){posFocus=S.cur.unit;show('positions');return}
   if(t.id==='unitUp'){S.cur.unit++;renderUnit();renderSpecies();save();return}
@@ -903,6 +916,20 @@ $('#photoIn').addEventListener('change',async e=>{const f=e.target.files&&e.targ
     save();renderAttrs();toast(`Photo ${c.photos.length} added`)}
   catch(err){toast('Could not read that photo')}});
 $('#otherQ').addEventListener('input',renderOther);
+/* ---------- screen lock (for wiping salt spray) ----------
+   Unlock needs a still press of 1.5 s on the unlock button; moving more than ~25 px (a wipe) cancels it. */
+let locked=false;
+function setLock(on){locked=on;$('#lockOv').hidden=!on;if(on&&document.activeElement)document.activeElement.blur();$('#uFill').style.width='0'}
+$('#lockBtn').onclick=()=>setLock(true);
+(()=>{const b=$('#unlockBtn'),fill=$('#uFill');let t0=0,raf=0,sx=0,sy=0;
+  const stop=()=>{t0=0;cancelAnimationFrame(raf);fill.style.transition='width .15s';fill.style.width='0'};
+  const tick=()=>{if(!t0)return;const f=Math.min(1,(performance.now()-t0)/1500);fill.style.width=(f*100)+'%';if(f>=1){stop();setLock(false);toast('Unlocked');return}raf=requestAnimationFrame(tick)};
+  b.addEventListener('pointerdown',e=>{e.preventDefault();if(t0)return;t0=performance.now();sx=e.clientX;sy=e.clientY;fill.style.transition='none';try{b.setPointerCapture(e.pointerId)}catch(_){}raf=requestAnimationFrame(tick)});
+  b.addEventListener('pointermove',e=>{if(t0&&Math.hypot(e.clientX-sx,e.clientY-sy)>25)stop()});
+  ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,stop));
+  $('#lockOv').addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+  $('#lockOv').addEventListener('contextmenu',e=>e.preventDefault());})();
+document.addEventListener('keydown',e=>{if(locked){e.preventDefault();e.stopImmediatePropagation()}},true);
 document.addEventListener('keydown',e=>{
   if(view!=='entry')return;const tg=e.target.tagName;if(tg==='INPUT'||tg==='TEXTAREA'||tg==='SELECT')return;
   if(/^[0-9]$/.test(e.key)){key(e.key);e.preventDefault()}

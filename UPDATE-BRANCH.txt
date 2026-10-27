@@ -1,6 +1,10 @@
-UPDATING THE GITHUB BRANCH TO V13
+UPDATING THE GITHUB BRANCH TO V14
 ================================
-New in v13: a Depth (m) box for each trap on the Positions page (exported as depth_m
+New in v14: a Lock button (top right) that locks the screen for wiping salt off;
+taps and keys are ignored until someone holds "Hold here 1.5 s to unlock" with a
+still finger (a wiping motion does not unlock). An orange Clear button inside the
+length display clears the whole length in one tap.
+From v13: a Depth (m) box for each trap on the Positions page (exported as depth_m
 and unit_depth_m); Time out now fills itself in when the first fish or Empty trap is
 entered for a trap (marked AUTO, never overwrites a time you set; exported with
 time_out_auto Y/N).
@@ -25,26 +29,26 @@ a red banner if a save ever fails (entry is never blocked); a backup status butt
 in the top bar (green / amber / red, tap it to back up); one-file Full backup and
 Restore (Setup); marking a station complete now saves the full backup plus that
 station's CSV. Existing data moves into the new store automatically the first
-time v7 opens. It replaces whatever version is on the branch now (v1 to v12). Survey data already on the iPads is kept.
+time v7 opens. It replaces whatever version is on the branch now (v1 to v13). Survey data already on the iPads is kept.
 
 A. UPDATE THE BRANCH (on a computer)
-1. Unzip catch-logger-v13.zip.
+1. Unzip catch-logger-v14.zip.
 2. Open your repository on github.com (e.g. github.com/YOUR-USERNAME/catch-logger).
    Check the branch selector above the file list says "main".
 3. Click "Add file" > "Upload files".
 4. Drag in ALL the files from the zip (not the folder). Same-named files are replaced.
-5. Under "Commit changes" type:  Release v13   then click "Commit changes".
+5. Under "Commit changes" type:  Release v14   then click "Commit changes".
 6. The file list should now show: index.html, sw.js, manifest.webmanifest,
    icon-180.png, icon-192.png, icon-512.png, README.txt, UPDATE-BRANCH.txt.
    If an old UPDATE-TO-V2.txt is there, open it > "..." menu > Delete file. (It is harmless.)
 7. Wait 1-2 minutes. Settings > Pages should show "Your site is live".
 8. Check: open  https://YOUR-USERNAME.github.io/catch-logger/sw.js  in a browser.
-   It must say  const VERSION = 'catch-logger-v13'.
+   It must say  const VERSION = 'catch-logger-v14'.
    Still showing an older number? Wait a few minutes and refresh; GitHub can lag.
 
 B. UPDATE EACH IPAD (with internet, after exporting today's data)
 IF THE IPAD IS ON v11 OR EARLIER: open the app, wait 20 seconds, close it fully
-(swipe the card away), reopen. Repeat once if Setup does not show v13.
+(swipe the card away), reopen. Repeat once if Setup does not show v14.
 FROM v12 ON:
     Open the app with internet. A green "Update downloaded · tap to restart"
     button appears within a few seconds; tap it. Or use Setup > Check for updates.
@@ -56,5 +60,5 @@ If an iPad is still on an old version after two open/close cycles:
     that iPad, so export first.
 
 NEXT TIME
-    For any later change, edit the files and change catch-logger-v13 to
-    catch-logger-v14 in sw.js (and APP_VERSION in index.html), then repeat A and B.
+    For any later change, edit the files and change catch-logger-v14 to
+    catch-logger-v15 in sw.js (and APP_VERSION in index.html), then repeat A and B.
