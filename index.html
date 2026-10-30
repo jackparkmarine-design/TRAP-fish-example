@@ -205,7 +205,8 @@ main{overflow:auto;padding-inline:16px;padding-block:0 16px;min-height:0}
 .confirmrow td{background:var(--danger-soft)}
 .confirmbar{display:flex;gap:12px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
 .btn.danger.solid{background:var(--danger);color:var(--on-fam)}
-.lenclr{min-height:40px;padding:0 14px;font-size:15px;background:var(--amb);border-color:var(--amb);color:var(--on-fam);margin-right:auto;align-self:center}
+#keypad [data-k="CLR"]{background:var(--amb);border-color:var(--amb);color:var(--on-fam);font-weight:700}
+.lenclr-unused{min-height:40px;padding:0 14px;font-size:15px;background:var(--amb);border-color:var(--amb);color:var(--on-fam);margin-right:auto;align-self:center}
 .lockbtn{min-height:42px;padding:0 14px;border-radius:8px;border:1px solid var(--go);background:var(--go-s);color:var(--go);font-weight:700;cursor:pointer;white-space:nowrap}
 .lockov{position:fixed;inset:0;z-index:50;background:rgba(5,12,16,.86);display:flex;align-items:center;justify-content:center;padding:16px;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .lockbox{display:flex;flex-direction:column;align-items:center;gap:10px;color:#e2ebef;text-align:center}
@@ -307,7 +308,7 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
         </div>
         <div class="lendisp">
           <div class="cursp" id="curSp">Pick a species</div>
-          <div class="len"><button class="btn lenclr" id="lenClr" aria-label="Clear length">Clear</button><span id="lenVal">—</span><small>mm FL</small></div>
+          <div class="len"><span id="lenVal">—</span><small>mm FL</small></div>
         </div>
         <div class="keypad" id="keypad"></div>
         <div class="group"><span class="lbl">Sex</span>
@@ -369,7 +370,7 @@ textarea.csv{width:100%;min-height:300px;font-family:var(--f-mono);font-size:12p
 
 <script>
 (function(){
-const APP_VERSION='v14';
+const APP_VERSION='v16';
 const LS_KEY='demersalCatchLogger.v2';
 const $=s=>document.querySelector(s);
 const esc=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -882,7 +883,6 @@ document.addEventListener('click',e=>{
   if(t.matches('#otherList .sp')){pickSpecies(allSpecies().find(x=>x.c===t.dataset.c));otherOpen=false;renderSpecies();renderLen();renderAttrs();save();return}
   if(t.id==='tepsBtn'){const c=S.cur;c.teps=!c.teps;if(c.teps){c.fate='DIS';c.dr=''}renderAttrs();return}
   if(t.id==='otherBtn'){otherOpen=!otherOpen;renderSpecies();if(otherOpen)$('#otherQ').focus();return}
-  if(t.id==='lenClr'){key('CLR');return}
   if(t.matches('#keypad .btn')){key(t.dataset.k);return}
   if(t.id==='posBtn'){posFocus=S.cur.unit;show('positions');return}
   if(t.id==='unitUp'){S.cur.unit++;renderUnit();renderSpecies();save();return}
@@ -997,6 +997,7 @@ function setPos(st,u,lat,lon,src,t){st.pos=st.pos||{};const o=st.pos[u]||{};st.p
 /* Trap time in (deployed) / time out (hauled). Stored as ISO; typed times use the survey date. */
 const hmOf=iso=>{if(!iso)return '';const d=new Date(iso);return isNaN(d)?'':z(d.getHours())+':'+z(d.getMinutes())};
 function isoFromHM(date,hm){if(!hm)return '';const d=new Date((date||new Date().toISOString().slice(0,10))+'T'+hm+':00');return isNaN(d)?'':d.toISOString()}
+const hmm=m=>m===''||m==null||!isFinite(m)?'':`${Math.floor(m/60)}:${z(Math.round(m)%60)}`;
 function unitSoak(p){if(!p||!p.tin||!p.tout)return '';let m=(new Date(p.tout)-new Date(p.tin))/60000;if(!isFinite(m))return '';if(m<0)m+=1440;return Math.round(m)}
 
 function viewPositions(){
@@ -1005,13 +1006,13 @@ function viewPositions(){
   other.innerHTML=`<h2>${L} positions · Set ${esc(st.h.stationNo)} · Line ${esc(st.h.lineNo)}</h2>
   <p class="note"><b>In now</b> and <b>Out now</b> stamp the time each ${L.toLowerCase()} goes in and comes out (tap the time to correct it). <b>Time out fills itself in</b> when the first fish or Empty ${L.toLowerCase()} is entered for a ${L.toLowerCase()}, marked AUTO; a time you set yourself is never changed. In now also takes the GPS position if the ${L.toLowerCase()} has none yet. Type a position as degrees and minutes like the plotter (19 24.391) or decimal degrees (-19.40652). Latitude is taken as South and longitude as East unless you add N or W. <b>Stamp GPS</b> takes the iPad's current fix, which comes from a Garmin GLO if one is paired.</p>
   <div class="tally"><span><b>${done}</b> of ${units.length} ${L.toLowerCase()}s positioned</span><span><b>${units.filter(u=>(st.pos[u]||{}).tin).length}</b> in · <b>${units.filter(u=>(st.pos[u]||{}).tout).length}</b> out</span><span>GPS: ${liveFix()?'±'+liveFix().acc+' m':'no fix'}</span></div>
-  <div class="panel"><div class="tblwrap"><table><thead><tr><th>${L}</th><th>Latitude</th><th>Longitude</th><th>Depth m</th><th>Time in</th><th>Time out</th><th>Soak</th><th>Position</th></tr></thead><tbody id="posBody">
+  <div class="panel"><div class="tblwrap"><table><thead><tr><th>${L}</th><th>Latitude</th><th>Longitude</th><th>Depth m</th><th>Time in</th><th>Time out</th><th>Soak (h:mm)</th><th>Position</th></tr></thead><tbody id="posBody">
   ${units.map(u=>{const p=st.pos[u]||{};return `<tr data-u="${u}" class="${posFocus===u?'sel':''}"><td class="mono">${u}</td>
    <td><input class="pin" id="plat_${u}" data-u="${u}" data-k="lat" value="${esc(fmtDM(p.lat,true))}" placeholder="deg min.mmm" autocomplete="off" autocapitalize="characters" aria-label="${L} ${u} latitude"></td>
    <td><input class="pin" id="plon_${u}" data-u="${u}" data-k="lon" value="${esc(fmtDM(p.lon,false))}" placeholder="deg min.mmm" autocomplete="off" autocapitalize="characters" aria-label="${L} ${u} longitude"></td>
    <td><input class="dpin" type="number" inputmode="decimal" step="any" id="pdep_${u}" data-u="${u}" value="${p.depth==null?'':esc(p.depth)}" placeholder="m" aria-label="${L} ${u} depth in metres"></td>
    ${['tin','tout'].map(k=>`<td><div class="tio"><input type="time" class="tin" id="${k}_${u}" data-u="${u}" data-k="${k}" value="${hmOf(p[k])}" aria-label="${L} ${u} time ${k==='tin'?'in':'out'}"><button class="btn nowbtn${p[k]?'':' due'}" data-now-u="${u}" data-k="${k}">${k==='tin'?'In':'Out'} now</button>${k==='tout'&&p.toutAuto&&p.tout?'<span class="autotag" title="Set by the first record entered for this trap">auto</span>':''}</div></td>`).join('')}
-   <td class="mono" id="psk_${u}">${unitSoak(p)}</td>
+   <td class="mono" id="psk_${u}">${hmm(unitSoak(p))}</td>
    <td><div class="gpscell"><button class="btn stampbtn" data-stamp-u="${u}">Stamp GPS</button><span class="psrc" id="ps_${u}">${esc(p.src||'')}</span></div></td></tr>`}).join('')}
   </tbody></table></div>
   <div class="actions"><button class="btn" id="addUnit">Add ${L.toLowerCase()}</button></div></div>
@@ -1040,7 +1041,7 @@ function viewPositions(){
     st.pos[u]=p;save();posFocus=u;viewPositions();toast(`${L} ${u} ${k==='tin'?'in':'out'} ${hmOf(p[k])}${extra}`)});
   other.querySelectorAll('.tin').forEach(inp=>inp.onchange=()=>{const u=+inp.dataset.u,k=inp.dataset.k,p=st.pos[u]||{lat:'',lon:'',t:'',src:''};
     p[k]=isoFromHM(st.h.date,inp.value);if(k==='tout')p.toutAuto=false;st.pos[u]=p;save();
-    {const tg=inp.parentElement.querySelector('.autotag');if(tg&&k==='tout')tg.remove()}$('#psk_'+u).textContent=unitSoak(p);
+    {const tg=inp.parentElement.querySelector('.autotag');if(tg&&k==='tout')tg.remove()}$('#psk_'+u).textContent=hmm(unitSoak(p));
     const nb=other.querySelector(`[data-now-u="${u}"][data-k="${k}"]`);if(nb)nb.classList.toggle('due',!p[k])});
   $('#addUnit').onclick=()=>{const u=(units.length?Math.max(...units):0)+1;st.pos[u]={lat:'',lon:'',t:'',src:''};posFocus=u;save();viewPositions()};
   $('#posBack').onclick=()=>show('entry');
@@ -1123,7 +1124,7 @@ function viewHeader(isNew){
     if(isNew){
       const n=Math.min(30,Math.max(1,parseInt($('#h_batch').value,10)||1));let first=null;
       for(let i=0;i<n;i++){const h2=Object.assign({},nh);if(h2.stationNo!=='')h2.stationNo=+nh.stationNo+i;if(autoOp)h2.opnum=makeOpnum(h2);
-        const ns={id:uid(),h:h2,created:new Date().toISOString(),seq:0};S.stations.push(ns);if(!first)first=ns}
+        const ns={id:uid(),h:h2,dev:S.device,created:new Date().toISOString(),seq:0};S.stations.push(ns);if(!first)first=ns}
       activate(first.id);S.cur.hook=1;save();toast(n===1?'Survey added':`${n} surveys added`);show('stations')}
     else{st.h=nh;save();toast('Header saved');show('stations')}
   };
@@ -1145,9 +1146,9 @@ function viewStations(){
     <button class="btn" id="doneSt"${st?'':' disabled'}>${st&&st.done?'Reopen station':'Mark complete'}</button>
     <button class="btn danger" id="delSt"${st&&!stRecs(st.id).length?'':' hidden'}>Delete empty station</button>
   </div>
-  <div class="panel"><div class="tblwrap"><table><thead><tr><th></th><th>Status</th><th>Date</th><th>Day</th><th>Stn</th><th>Method</th><th>OPNUM</th><th>Location</th><th>Depth m</th><th>Pos.</th><th>Fish</th><th>Ret.</th><th>Soak</th><th></th></tr></thead>
+  <div class="panel"><div class="tblwrap"><table><thead><tr><th></th><th>Status</th><th>Date</th><th>Day</th><th>Stn</th><th>Method</th><th>OPNUM</th><th>Location</th><th>Depth m</th><th>Pos.</th><th>Fish</th><th>Ret.</th><th>Soak h:mm</th><th></th></tr></thead>
   <tbody>${sorted.map(s=>{const rs=stRecs(s.id),f=rs.filter(r=>!r.empty),[lab,cls]=status(s);
-    return `<tr data-st="${s.id}" class="${s.id===S.active?'sel':''}"><td>${s.id===S.active?'●':''}</td><td><span class="stat ${cls}">${lab}</span></td><td class="mono">${esc(s.h.date)}</td><td class="mono">${esc(s.h.dayNo)}</td><td class="mono">${esc(s.h.stationNo)}</td><td>${esc(s.h.method)}</td><td class="mono">${esc(s.h.opnum)}</td><td>${esc(s.h.location)}</td><td class="mono">${esc(s.h.depth!=null?s.h.depth:s.h.depthMin)}</td><td class="mono">${(()=>{const us=unitList(s);return us.filter(u=>hasPos((s.pos||{})[u])).length+'/'+us.length})()}</td><td class="mono">${f.length}</td><td class="mono">${f.filter(r=>isRet(r)).length}</td><td class="mono">${soak(s.h)}</td>
+    return `<tr data-st="${s.id}" class="${s.id===S.active?'sel':''}"><td>${s.id===S.active?'●':''}</td><td><span class="stat ${cls}">${lab}</span></td><td class="mono">${esc(s.h.date)}</td><td class="mono">${esc(s.h.dayNo)}</td><td class="mono">${esc(s.h.stationNo)}</td><td>${esc(s.h.method)}</td><td class="mono">${esc(s.h.opnum)}</td><td>${esc(s.h.location)}</td><td class="mono">${esc(s.h.depth!=null?s.h.depth:s.h.depthMin)}</td><td class="mono">${(()=>{const us=unitList(s);return us.filter(u=>hasPos((s.pos||{})[u])).length+'/'+us.length})()}</td><td class="mono">${f.length}</td><td class="mono">${f.filter(r=>isRet(r)).length}</td><td class="mono">${hmm(soak(s.h))}</td>
     <td><button class="btn go" data-go="${s.id}">Enter data</button></td></tr>`}).join('')||'<tr class="empty"><td colspan="13">No surveys yet. Tap Add Survey.</td></tr>'}</tbody></table></div></div>`;
   other.querySelectorAll('tr[data-st]').forEach(tr=>tr.onclick=e=>{if(e.target.closest('[data-go]'))return;activate(tr.dataset.st);viewStations();renderTop()});
   other.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{activate(b.dataset.go);show('entry')});
@@ -1162,23 +1163,32 @@ function viewStations(){
 /* export */
 const q=v=>{v=v==null?'':String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
 const HKEYS=[...HFK.map(f=>f.k),'set_time','set_lat','set_lon','haul_time','haul_lat','haul_lon'];
-const RKEYS=['id','station','device','seq','ts','tsl','unit','hook','empty','species','sci','caab','fl_mm','sex','fate','dr','rc','teps','dep','oto','gon','fin','sto','ulat','ulon','udep','utin','utout','usoak','lat','lon','photos','comment','edited'];
-const RNAMES={id:'record_id',station:'station_id',seq:'record_no',ts:'timestamp_utc',tsl:'time_local',empty:'empty_unit',sci:'scientific_name',caab:'caab_code',dr:'discard_reason',rc:'release_condition',teps:'teps_interaction',dep:'depredation',oto:'otolith_id',gon:'gonad_id',fin:'finclip_id',sto:'stomach_id',comment:'comment_or_interaction',ulat:'unit_lat',ulon:'unit_lon',udep:'unit_depth_m',utin:'unit_time_in',utout:'unit_time_out',usoak:'unit_soak_min',photos:'photo_files',lat:'fish_gps_lat',lon:'fish_gps_lon'};
+const RKEYS=['id','rcode','station','scode','device','seq','ts','tsl','unit','hook','empty','species','sci','caab','fl_mm','sex','fate','dr','rc','teps','dep','oto','gon','fin','sto','ulat','ulon','udep','utin','utout','usoak','lat','lon','photos','comment','edited'];
+const RNAMES={id:'record_id',rcode:'record_code',station:'station_id',scode:'station_code',seq:'record_no',ts:'timestamp_utc',tsl:'time_local',empty:'empty_unit',sci:'scientific_name',caab:'caab_code',dr:'discard_reason',rc:'release_condition',teps:'teps_interaction',dep:'depredation',oto:'otolith_id',gon:'gonad_id',fin:'finclip_id',sto:'stomach_id',comment:'comment_or_interaction',ulat:'unit_lat',ulon:'unit_lon',udep:'unit_depth_m',utin:'unit_time_in',utout:'unit_time_out',usoak:'unit_soak_min',photos:'photo_files',lat:'fish_gps_lat',lon:'fish_gps_lon'};
+/* Readable codes for R: parts separated by "_" so they split cleanly.
+   station_code = DEVICE_OPNUM            e.g. K1_26103001
+   record_code  = DEVICE_OPNUM_T4_R37     (T trap / D drop / A angler, then unit, then record number)
+   The random record_id / station_id stay as the guaranteed-unique join keys. */
+const UNIT_CODE={Trap:'T',Dropline:'D','Hook and line':'A'};
+const tok=v=>String(v==null?'':v).trim().replace(/[\s_]+/g,'-');
+function stationCode(st){const dev=st.dev||S.device,h=st.h||{},op=h.opnum||(String(h.date||'').replace(/-/g,'').slice(2)+z(+h.stationNo||0));return `${tok(dev||S.device)}_${tok(op)}`}
+function recordCode(r){const st=S.stations.find(x=>x.id===r.station);return st?`${stationCode(st)}_${UNIT_CODE[st.h.method]||'U'}${r.unit}_R${r.seq}`:''}
 function csv(kind,scope){
   const sts=scope==='all'?S.stations:S.stations.filter(s=>s.id===S.active),ids=new Set(sts.map(s=>s.id));
   const recs=S.records.filter(r=>ids.has(r.station));
-  const hrow=st=>[st.id,S.device,...HKEYS.map(k=>st.h[k]),soak(st.h)];
-  const hcols=['station_id','device',...HKEYS,'soak_min'];
+  const hrow=st=>[st.id,stationCode(st),st.dev||S.device,...HKEYS.map(k=>st.h[k]),soak(st.h)];
+  const hcols=['station_id','station_code','device',...HKEYS,'soak_min'];
   const xlTime=iso=>{if(!iso)return '';const d=new Date(iso);return isNaN(d)?'':`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`};
 const rrow=r=>{const st=S.stations.find(x=>x.id===r.station),p=st&&st.pos&&st.pos[r.unit];
-  return RKEYS.map(k=>k==='empty'||k==='teps'?(r[k]?'Y':'N'):k==='tsl'?xlTime(r.ts):k==='ulat'?(hasPos(p)?p.lat:''):k==='ulon'?(hasPos(p)?p.lon:''):k==='udep'?(p&&p.depth!=null?p.depth:''):k==='utin'?xlTime(p&&p.tin):k==='utout'?xlTime(p&&p.tout):k==='usoak'?unitSoak(p):k==='photos'?photoNames(r).join(' '):r[k])};
+  return RKEYS.map(k=>k==='rcode'?recordCode(r):k==='scode'?(st?stationCode(st):''):k==='empty'||k==='teps'?(r[k]?'Y':'N'):k==='tsl'?xlTime(r.ts):k==='ulat'?(hasPos(p)?p.lat:''):k==='ulon'?(hasPos(p)?p.lon:''):k==='udep'?(p&&p.depth!=null?p.depth:''):k==='utin'?xlTime(p&&p.tin):k==='utout'?xlTime(p&&p.tout):k==='usoak'?unitSoak(p):k==='photos'?photoNames(r).join(' '):r[k])};
   const rcols=RKEYS.map(k=>RNAMES[k]||k);
   let rows;
   if(kind==='stations')rows=[hcols,...sts.map(hrow)];
-  else if(kind==='positions'){rows=[['station_id','device','opnum','date','line','set','method','unit','lat','lon','lat_dm','lon_dm','time','source','time_in','time_out','unit_soak_min','depth_m','time_out_auto']];
-    sts.forEach(st=>unitList(st).forEach(u=>{const p=(st.pos||{})[u]||{};rows.push([st.id,S.device,st.h.opnum,st.h.date,st.h.lineNo,st.h.stationNo,st.h.method,u,hasPos(p)?p.lat:'',hasPos(p)?p.lon:'',fmtDM(p.lat,true),fmtDM(p.lon,false),p.t||'',p.src||'',xlTime(p.tin),xlTime(p.tout),unitSoak(p),p.depth==null?'':p.depth,p.tout?(p.toutAuto?'Y':'N'):''])}))}
+  else if(kind==='positions'){rows=[['station_id','station_code','device','opnum','date','line','set','method','unit','lat','lon','lat_dm','lon_dm','time','source','time_in','time_out','unit_soak_min','depth_m','time_out_auto']];
+    sts.forEach(st=>unitList(st).forEach(u=>{const p=(st.pos||{})[u]||{};rows.push([st.id,stationCode(st),st.dev||S.device,st.h.opnum,st.h.date,st.h.lineNo,st.h.stationNo,st.h.method,u,hasPos(p)?p.lat:'',hasPos(p)?p.lon:'',fmtDM(p.lat,true),fmtDM(p.lon,false),p.t||'',p.src||'',xlTime(p.tin),xlTime(p.tout),unitSoak(p),p.depth==null?'':p.depth,p.tout?(p.toutAuto?'Y':'N'):''])}))}
   else if(kind==='fish')rows=[rcols,...recs.map(rrow)];
-  else{const m=Object.fromEntries(sts.map(s=>[s.id,s]));rows=[[...hcols,rcols[0],...rcols.slice(3)],...recs.map(r=>{const rr=rrow(r);return [...hrow(m[r.station]),rr[0],...rr.slice(3)]})]}
+  else{const m=Object.fromEntries(sts.map(s=>[s.id,s])),keep=RKEYS.map((k,i)=>['station','scode','device'].includes(k)?-1:i).filter(i=>i>=0);
+    rows=[[...hcols,...keep.map(i=>rcols[i])],...recs.map(r=>{const rr=rrow(r);return [...hrow(m[r.station]),...keep.map(i=>rr[i])]})]}
   return rows.map(r=>r.map(q).join(',')).join('\n');
 }
 let exKind='flat',exScope='active';
@@ -1241,7 +1251,9 @@ function viewSetup(){
     toast({latest:`You have the latest version (${APP_VERSION})`,downloading:'New version downloading. A restart button will appear',ready:'Update ready. Tap the green button to restart',offline:'No internet. Try again when back in range',none:'Open the app from the home-screen icon to get updates'}[r]||'Checked')};
   $('#bkNow3').onclick=()=>fullBackup(false);
   $('#rsFile').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>previewRestore(String(rd.result));rd.onerror=()=>toast('Could not read that file');rd.readAsText(f)};
-  $('#sSave').onclick=()=>{S.device=$('#s_dev').value.trim()||S.device;S.preset=$('#s_pre').value;S.defFate=$('#s_fate').value;
+  $('#sSave').onclick=()=>{const oldDev=S.device;S.device=$('#s_dev').value.trim()||S.device;
+    /* renaming this iPad renames its own surveys and fish; surveys merged from other iPads keep their names */
+    if(S.device!==oldDev){S.stations.forEach(st=>{if(!st.dev||st.dev===oldDev)st.dev=S.device});S.records.forEach(r=>{if(r.device===oldDev)r.device=S.device})}S.preset=$('#s_pre').value;S.defFate=$('#s_fate').value;
     SAMPLES.forEach(([k])=>{S.serials[k].prefix=$('#s_'+k+'p').value.trim();S.serials[k].next=Math.max(1,parseInt($('#s_'+k+'n').value,10)||1)});
     save();renderTop();toast('Setup saved')};
   $('#clrEx').onclick=e=>armed(e.target,'Tap again to clear examples',()=>{
@@ -1272,7 +1284,7 @@ function previewRestore(txt){const out=$('#rsOut');let b;
    <div class="actions"><button class="btn primary" id="rsMerge">Add missing (${newS} stations, ${newR} records)</button><button class="btn danger" id="rsReplace">Replace everything on this iPad</button></div>
    <p class="note"><b>Add missing</b> keeps everything here and adds what is only in the backup. <b>Replace</b> makes this iPad an exact copy of the backup, including its Device ID and next sample serials, so it carries on where the other iPad left off. Make a backup of this iPad first if it holds anything you need.</p>`;
   $('#rsMerge').onclick=async()=>{await putPhotos(false);const add=B.records.filter(r=>!haveR.has(r.id));S.records=S.records.concat(add).sort((x,y)=>String(x.ts).localeCompare(String(y.ts)));
-    B.stations.forEach(bs=>{const cur=S.stations.find(x=>x.id===bs.id);if(!cur){S.stations.push(bs);return}
+    B.stations.forEach(bs=>{if(!bs.dev)bs.dev=B.device||b.device;const cur=S.stations.find(x=>x.id===bs.id);if(!cur){S.stations.push(bs);return}
       cur.seq=Math.max(cur.seq||0,bs.seq||0);if(bs.pos){cur.pos=cur.pos||{};Object.keys(bs.pos).forEach(u=>{if(!cur.pos[u])cur.pos[u]=bs.pos[u];else['tin','tout'].forEach(k=>{if(!cur.pos[u][k]&&bs.pos[u][k])cur.pos[u][k]=bs.pos[u][k]})})}});
     if(B.serials)SAMPLES.forEach(([k])=>{const a=S.serials[k],o=B.serials[k];if(o&&a&&o.prefix===a.prefix)a.next=Math.max(a.next,o.next)});
     save();toast(`Added ${newS} stations and ${add.length} records`);show('stations')};
@@ -1291,6 +1303,7 @@ document.addEventListener('pointerdown',function wl(){try{navigator.wakeLock&&na
   /* newest copy wins; the second copy stops updating once it is full, so the main store is normally newer */
   let pick=a&&b?((a.savedAt||'')>=(b.savedAt||'')?a:b):(a||b);
   S=pick?fillDefaults(pick):fresh();
+  S.stations.forEach(st=>{if(!st.dev)st.dev=S.device});
   applyUi();save();startGPS();renderGPS();show('stations');
 })();
 })();

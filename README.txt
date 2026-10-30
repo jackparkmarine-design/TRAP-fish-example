@@ -1,4 +1,4 @@
-CATCH LOGGER - OFFLINE IPAD APP (version v14)
+CATCH LOGGER - OFFLINE IPAD APP (version v16)
 ============================================
 
 What is in this folder
@@ -56,7 +56,7 @@ STEP 3 - TEST BEFORE THE BOAT
 
 UPDATING THE APP LATER
 ----------------------
-1. Edit the files, then in sw.js change  catch-logger-v14  to  catch-logger-v15  (and so on).
+1. Edit the files, then in sw.js change  catch-logger-v16  to  catch-logger-v17  (and so on).
    If you skip this, iPads keep using the old copy.
 2. Upload the changed files to the same GitHub repository (Add file > Upload files).
 3. Each iPad gets the update the next time the app is opened with internet.

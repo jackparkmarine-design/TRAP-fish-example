@@ -1,6 +1,14 @@
-UPDATING THE GITHUB BRANCH TO V14
+UPDATING THE GITHUB BRANCH TO V16
 ================================
-New in v14: a Lock button (top right) that locks the screen for wiping salt off;
+New in v16: the keypad Clear key is now orange (the small Clear inside the length
+display is removed); soak times show as h:mm on the Positions and Survey pages
+(exports keep minutes: soak_min, unit_soak_min).
+From v15: readable codes in every export for R: station_code (DEVICE_OPNUM,
+e.g. K1_26103001) and record_code (DEVICE_OPNUM_T4_R37). The random record_id and
+station_id stay as the join keys. Renaming the iPad in Setup now renames its own
+surveys and fish to match. The Positions page header reads "Soak (min)".
+Set each iPad's Device ID in Setup (e.g. K1) before the trip so codes read well.
+From v14: a Lock button (top right) that locks the screen for wiping salt off;
 taps and keys are ignored until someone holds "Hold here 1.5 s to unlock" with a
 still finger (a wiping motion does not unlock). An orange Clear button inside the
 length display clears the whole length in one tap.
@@ -29,26 +37,26 @@ a red banner if a save ever fails (entry is never blocked); a backup status butt
 in the top bar (green / amber / red, tap it to back up); one-file Full backup and
 Restore (Setup); marking a station complete now saves the full backup plus that
 station's CSV. Existing data moves into the new store automatically the first
-time v7 opens. It replaces whatever version is on the branch now (v1 to v13). Survey data already on the iPads is kept.
+time v7 opens. It replaces whatever version is on the branch now (v1 to v15). Survey data already on the iPads is kept.
 
 A. UPDATE THE BRANCH (on a computer)
-1. Unzip catch-logger-v14.zip.
+1. Unzip catch-logger-v16.zip.
 2. Open your repository on github.com (e.g. github.com/YOUR-USERNAME/catch-logger).
    Check the branch selector above the file list says "main".
 3. Click "Add file" > "Upload files".
 4. Drag in ALL the files from the zip (not the folder). Same-named files are replaced.
-5. Under "Commit changes" type:  Release v14   then click "Commit changes".
+5. Under "Commit changes" type:  Release v16   then click "Commit changes".
 6. The file list should now show: index.html, sw.js, manifest.webmanifest,
    icon-180.png, icon-192.png, icon-512.png, README.txt, UPDATE-BRANCH.txt.
    If an old UPDATE-TO-V2.txt is there, open it > "..." menu > Delete file. (It is harmless.)
 7. Wait 1-2 minutes. Settings > Pages should show "Your site is live".
 8. Check: open  https://YOUR-USERNAME.github.io/catch-logger/sw.js  in a browser.
-   It must say  const VERSION = 'catch-logger-v14'.
+   It must say  const VERSION = 'catch-logger-v16'.
    Still showing an older number? Wait a few minutes and refresh; GitHub can lag.
 
 B. UPDATE EACH IPAD (with internet, after exporting today's data)
 IF THE IPAD IS ON v11 OR EARLIER: open the app, wait 20 seconds, close it fully
-(swipe the card away), reopen. Repeat once if Setup does not show v14.
+(swipe the card away), reopen. Repeat once if Setup does not show v16.
 FROM v12 ON:
     Open the app with internet. A green "Update downloaded · tap to restart"
     button appears within a few seconds; tap it. Or use Setup > Check for updates.
@@ -60,5 +68,5 @@ If an iPad is still on an old version after two open/close cycles:
     that iPad, so export first.
 
 NEXT TIME
-    For any later change, edit the files and change catch-logger-v14 to
-    catch-logger-v15 in sw.js (and APP_VERSION in index.html), then repeat A and B.
+    For any later change, edit the files and change catch-logger-v16 to
+    catch-logger-v17 in sw.js (and APP_VERSION in index.html), then repeat A and B.
